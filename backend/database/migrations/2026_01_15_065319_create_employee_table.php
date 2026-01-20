@@ -17,8 +17,7 @@ return new class extends Migration
             $table->string('email', 255)->unique();
             $table->string('username', 255)->unique();
             $table->string('password', 255);
-            $table->foreignId('rank_id')->nullable()->constrained('rank')->cascadeOnDelete();
-            $table->foreignId('position_id')->nullable()->constrained('position')->cascadeOnDelete();
+            $table->string('position', 255)->nullable();
             $table->foreignId('role_id')->nullable()->constrained('role')->cascadeOnDelete();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

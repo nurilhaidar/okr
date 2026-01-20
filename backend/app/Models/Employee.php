@@ -20,8 +20,7 @@ class Employee extends Authenticatable
         'email',
         'username',
         'password',
-        'rank_id',
-        'position_id',
+        'position',
         'role_id',
         'is_active',
     ];
@@ -37,16 +36,6 @@ class Employee extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
-    }
-
-    public function rank(): BelongsTo
-    {
-        return $this->belongsTo(Rank::class);
-    }
-
-    public function position(): BelongsTo
-    {
-        return $this->belongsTo(Position::class);
     }
 
     public function role(): BelongsTo

@@ -17,7 +17,7 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $employee = Employee::with(['rank', 'position', 'role'])
+        $employee = Employee::with(['role'])
             ->where('email', $request->email)
             ->first();
 
@@ -64,7 +64,7 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        $employee = $request->user()->load(['rank', 'position', 'role', 'orgUnits.type']);
+        $employee = $request->user()->load(['role', 'orgUnits.type']);
 
         return response()->json([
             'success' => true,
@@ -75,8 +75,7 @@ class AuthController extends Controller
                     'email' => $employee->email,
                     'username' => $employee->username,
                     'role' => $employee->role?->name,
-                    'position' => $employee->position?->name,
-                    'rank' => $employee->rank?->name,
+                    'position' => $employee->position,
                 ],
             ],
         ]);

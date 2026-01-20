@@ -4,8 +4,6 @@ import Dashboard from './pages/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
 import Employees from './pages/Employees'
 import Roles from './pages/Roles'
-import Ranks from './pages/Ranks'
-import Positions from './pages/Positions'
 
 function App() {
   return (
@@ -17,8 +15,6 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="employees" element={<Employees />} />
           <Route path="roles" element={<Roles />} />
-          <Route path="ranks" element={<Ranks />} />
-          <Route path="positions" element={<Positions />} />
         </Route>
       </Routes>
     </BrowserRouter>

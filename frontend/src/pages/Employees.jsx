@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getEmployees, createEmployee, updateEmployee, deactivateEmployee, activateEmployee, deleteEmployee, getRoles, getRanks, getPositions } from '../services/api'
+import { getEmployees, createEmployee, updateEmployee, deactivateEmployee, activateEmployee, deleteEmployee, getRoles } from '../services/api'
 
 const Employees = () => {
   const [employees, setEmployees] = useState([])
   const [roles, setRoles] = useState([])
-  const [ranks, setRanks] = useState([])
-  const [positions, setPositions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState(null)
@@ -15,8 +13,7 @@ const Employees = () => {
     email: '',
     username: '',
     password: '',
-    rank_id: '',
-    position_id: '',
+    position: '',
     role_id: '',
     is_active: true
   })
@@ -27,16 +24,12 @@ const Employees = () => {
 
   const fetchData = async () => {
     try {
-      const [employeesRes, rolesRes, ranksRes, positionsRes] = await Promise.all([
+      const [employeesRes, rolesRes] = await Promise.all([
         getEmployees(),
-        getRoles(),
-        getRanks(),
-        getPositions()
+        getRoles()
       ])
       setEmployees(employeesRes.data)
       setRoles(rolesRes.data)
-      setRanks(ranksRes.data)
-      setPositions(positionsRes.data)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -69,8 +62,7 @@ const Employees = () => {
       email: employee.email,
       username: employee.username,
       password: '',
-      rank_id: employee.rank_id || '',
-      position_id: employee.position_id || '',
+      position: employee.position || '',
       role_id: employee.role_id || '',
       is_active: employee.is_active
     })
@@ -107,8 +99,7 @@ const Employees = () => {
       email: '',
       username: '',
       password: '',
-      rank_id: '',
-      position_id: '',
+      position: '',
       role_id: '',
       is_active: true
     })
@@ -167,7 +158,6 @@ const Employees = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Position</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
@@ -191,8 +181,7 @@ const Employees = () => {
                       {employee.role?.name || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{employee.position?.name || 'N/A'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{employee.rank?.name || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{employee.position || 'N/A'}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                       employee.is_active
@@ -315,29 +304,13 @@ const Employees = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Position</label>
-                  <select
-                    value={formData.position_id}
-                    onChange={(e) => setFormData({ ...formData, position_id: e.target.value })}
+                  <input
+                    type="text"
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    placeholder="e.g., Software Engineer"
                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
-                  >
-                    <option value="">Select Position</option>
-                    {positions.map((position) => (
-                      <option key={position.id} value={position.id}>{position.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Rank</label>
-                  <select
-                    value={formData.rank_id}
-                    onChange={(e) => setFormData({ ...formData, rank_id: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
-                  >
-                    <option value="">Select Rank</option>
-                    {ranks.map((rank) => (
-                      <option key={rank.id} value={rank.id}>{rank.name}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="flex items-center">
                   <input

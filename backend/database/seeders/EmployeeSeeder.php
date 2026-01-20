@@ -20,8 +20,7 @@ class EmployeeSeeder extends Seeder
                 'email' => 'admin@okr.com',
                 'username' => 'admin',
                 'password' => Hash::make('password'),
-                'rank_id' => 7, // C-Level
-                'position_id' => 3, // Tech Lead
+                'position' => 'Chief Technology Officer',
                 'role_id' => 1, // Admin
                 'is_active' => true,
             ],
@@ -30,8 +29,7 @@ class EmployeeSeeder extends Seeder
                 'email' => 'john@okr.com',
                 'username' => 'johnm',
                 'password' => Hash::make('password'),
-                'rank_id' => 5, // Principal
-                'position_id' => 4, // Project Manager
+                'position' => 'Project Manager',
                 'role_id' => 2, // Manager
                 'is_active' => true,
             ],
@@ -40,8 +38,7 @@ class EmployeeSeeder extends Seeder
                 'email' => 'jane@okr.com',
                 'username' => 'janed',
                 'password' => Hash::make('password'),
-                'rank_id' => 3, // Senior
-                'position_id' => 2, // Senior Software Engineer
+                'position' => 'Senior Software Engineer',
                 'role_id' => 3, // Employee
                 'is_active' => true,
             ],
@@ -50,8 +47,7 @@ class EmployeeSeeder extends Seeder
                 'email' => 'bob@okr.com',
                 'username' => 'bobs',
                 'password' => Hash::make('password'),
-                'rank_id' => 4, // Lead
-                'position_id' => 3, // Tech Lead
+                'position' => 'Tech Lead',
                 'role_id' => 4, // Supervisor
                 'is_active' => true,
             ],
@@ -60,8 +56,7 @@ class EmployeeSeeder extends Seeder
                 'email' => 'alice@okr.com',
                 'username' => 'aliced',
                 'password' => Hash::make('password'),
-                'rank_id' => 6, // VP
-                'position_id' => 11, // HR Manager
+                'position' => 'Human Resources Manager',
                 'role_id' => 5, // Director
                 'is_active' => true,
             ],

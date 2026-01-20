@@ -93,8 +93,7 @@ Get currently authenticated user information.
       "email": "admin@okr.com",
       "username": "admin",
       "role": "Admin",
-      "position": "Tech Lead",
-      "rank": "C-Level"
+      "position": "Chief Technology Officer"
     }
   }
 }
@@ -122,8 +121,7 @@ Get all employees with their relationships.
       "email": "admin@okr.com",
       "username": "admin",
       "is_active": true,
-      "rank": { "id": 7, "name": "C-Level" },
-      "position": { "id": 3, "name": "Tech Lead" },
+      "position": "Chief Technology Officer",
       "role": { "id": 1, "name": "Admin" }
     }
   ]
@@ -146,8 +144,7 @@ Create a new employee.
   "email": "john@example.com",
   "username": "johndoe",
   "password": "password123",
-  "rank_id": 1,
-  "position_id": 1,
+  "position": "Software Engineer",
   "role_id": 1,
   "is_active": true
 }
@@ -164,8 +161,7 @@ Create a new employee.
     "email": "john@example.com",
     "username": "johndoe",
     "is_active": true,
-    "rank": { "id": 1, "name": "Junior" },
-    "position": { "id": 1, "name": "Software Engineer" },
+    "position": "Software Engineer",
     "role": { "id": 1, "name": "Admin" }
   }
 }
@@ -193,8 +189,7 @@ Get details of a specific employee.
     "email": "admin@okr.com",
     "username": "admin",
     "is_active": true,
-    "rank": { "id": 7, "name": "C-Level" },
-    "position": { "id": 3, "name": "Tech Lead" },
+    "position": "Chief Technology Officer",
     "role": { "id": 1, "name": "Admin" },
     "org_units": [...]
   }
@@ -752,6 +747,6 @@ For testing purposes, use these credentials:
 1. All datetime fields are returned in ISO 8601 format
 2. All boolean values are returned as `true` or `false`
 3. IDs are auto-incrementing integers
-4. Foreign key relationships (rank_id, position_id, role_id) must reference existing records
+4. Foreign key relationships (role_id) must reference existing records
 5. Passwords are automatically hashed before storage
 6. Soft delete is not implemented - delete operations permanently remove records

@@ -110,46 +110,4 @@ export const deleteRole = async (id) => {
   return response.data
 }
 
-// Rank APIs
-export const getRanks = async () => {
-  const response = await api.get('/ranks')
-  return response.data
-}
-
-export const createRank = async (data) => {
-  const response = await api.post('/ranks', data)
-  return response.data
-}
-
-export const updateRank = async (id, data) => {
-  const response = await api.put(`/ranks/${id}`, data)
-  return response.data
-}
-
-export const deleteRank = async (id) => {
-  const response = await api.delete(`/ranks/${id}`)
-  return response.data
-}
-
-// Position APIs
-export const getPositions = async () => {
-  const response = await api.get('/positions')
-  return response.data
-}
-
-export const createPosition = async (data) => {
-  const response = await api.post('/positions', data)
-  return response.data
-}
-
-export const updatePosition = async (id, data) => {
-  const response = await api.put(`/positions/${id}`, data)
-  return response.data
-}
-
-export const deletePosition = async (id) => {
-  const response = await api.delete(`/positions/${id}`)
-  return response.data
-}
-
 export default api

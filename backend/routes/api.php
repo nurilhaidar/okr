@@ -3,8 +3,9 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\RankController;
-use App\Http\Controllers\Api\PositionController;
+use App\Http\Controllers\Api\OrgUnitController;
+use App\Http\Controllers\Api\OrgUnitTypeController;
+use App\Http\Controllers\Api\OrgUnitRoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -21,9 +22,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Role Routes
     Route::apiResource('roles', RoleController::class);
 
-    // Rank Routes
-    Route::apiResource('ranks', RankController::class);
+    // OrgUnit Routes
+    Route::apiResource('orgunits', OrgUnitController::class);
+    Route::get('/orgunits/datatables', [OrgUnitController::class, 'datatables']);
+    Route::patch('/orgunits/{id}/deactivate', [OrgUnitController::class, 'deactivate']);
+    Route::patch('/orgunits/{id}/activate', [OrgUnitController::class, 'activate']);
 
-    // Position Routes
-    Route::apiResource('positions', PositionController::class);
+    // OrgUnitType Routes
+    Route::apiResource('orgunit-types', OrgUnitTypeController::class);
+    Route::get('/orgunit-types/datatables', [OrgUnitTypeController::class, 'datatables']);
+
+    // OrgUnitRole Routes
+    Route::apiResource('orgunit-roles', OrgUnitRoleController::class);
+    Route::get('/orgunit-roles/datatables', [OrgUnitRoleController::class, 'datatables']);
 });
