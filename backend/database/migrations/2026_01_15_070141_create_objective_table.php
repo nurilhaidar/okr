@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('objective', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('okr_id')->constrained('okr')->cascadeOnDelete();
             $table->text('description');
             $table->decimal('weight', 5, 4);
             $table->enum('target_type', ['numeric', 'binary']);

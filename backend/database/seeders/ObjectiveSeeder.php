@@ -15,6 +15,7 @@ class ObjectiveSeeder extends Seeder
     {
         $objectives = [
             [
+                'okr_id' => 1, // Q1 2026 Engineering Goals
                 'description' => 'Complete the new user authentication module with OAuth2 support',
                 'weight' => 0.3000,
                 'target_type' => 'binary',
@@ -24,6 +25,7 @@ class ObjectiveSeeder extends Seeder
                 'approver' => 4, // Bob Supervisor
             ],
             [
+                'okr_id' => 1, // Q1 2026 Engineering Goals
                 'description' => 'Achieve 95% code coverage for all critical modules',
                 'weight' => 0.2500,
                 'target_type' => 'numeric',
@@ -33,6 +35,7 @@ class ObjectiveSeeder extends Seeder
                 'approver' => 4, // Bob Supervisor
             ],
             [
+                'okr_id' => 2, // Q1 2026 Team Objectives
                 'description' => 'Reduce API response time to under 200ms for 95% of requests',
                 'weight' => 0.2000,
                 'target_type' => 'numeric',
@@ -42,6 +45,7 @@ class ObjectiveSeeder extends Seeder
                 'approver' => 2, // John Manager
             ],
             [
+                'okr_id' => 3, // Q1 2026 Department OKRs
                 'description' => 'Conduct 5 security audits and implement all recommendations',
                 'weight' => 0.2500,
                 'target_type' => 'numeric',
@@ -51,6 +55,7 @@ class ObjectiveSeeder extends Seeder
                 'approver' => 2, // John Manager
             ],
             [
+                'okr_id' => 1, // Q1 2026 Engineering Goals
                 'description' => 'Migrate legacy database to new infrastructure',
                 'weight' => 0.4000,
                 'target_type' => 'binary',
