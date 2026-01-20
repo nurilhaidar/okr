@@ -14,19 +14,16 @@ class OrgUnitRoleSeeder extends Seeder
     public function run(): void
     {
         $orgUnitRoles = [
-            ['name' => 'Head of Department'],
-            ['name' => 'Department Manager'],
-            ['name' => 'Team Lead'],
-            ['name' => 'Division Head'],
-            ['name' => 'Unit Manager'],
-            ['name' => 'Branch Manager'],
-            ['name' => 'Section Head'],
-            ['name' => 'Member'],
-            ['name' => 'Assistant'],
+            ['name' => 'Team Lead', 'is_exclusive' => true],
+            ['name' => 'Manager', 'is_exclusive' => true],
+            ['name' => 'Member', 'is_exclusive' => false],
         ];
 
         foreach ($orgUnitRoles as $orgUnitRole) {
-            DB::table('orgunit_role')->insert($orgUnitRole);
+            DB::table('orgunit_role')->insert(array_merge($orgUnitRole, [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
         }
     }
 }

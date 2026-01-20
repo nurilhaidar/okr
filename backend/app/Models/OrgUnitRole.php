@@ -11,7 +11,11 @@ class OrgUnitRole extends \Illuminate\Database\Eloquent\Model
 
     protected $table = 'orgunit_role';
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'is_exclusive'];
+
+    protected $casts = [
+        'is_exclusive' => 'boolean',
+    ];
 
     public function orgUnitEmployees(): HasMany
     {

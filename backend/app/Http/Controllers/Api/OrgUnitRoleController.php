@@ -87,10 +87,12 @@ class OrgUnitRoleController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:orgunit_role,name',
+            'is_exclusive' => 'boolean',
         ]);
 
         $orgUnitRole = OrgUnitRole::create([
             'name' => $request->name,
+            'is_exclusive' => $request->is_exclusive ?? false,
         ]);
 
         return response()->json([
@@ -136,9 +138,10 @@ class OrgUnitRoleController extends Controller
 
         $request->validate([
             'name' => 'sometimes|required|string|max:255|unique:orgunit_role,name,' . $id,
+            'is_exclusive' => 'boolean',
         ]);
 
-        $orgUnitRole->update($request->only(['name']));
+        $orgUnitRole->update($request->only(['name', 'is_exclusive']));
 
         return response()->json([
             'success' => true,

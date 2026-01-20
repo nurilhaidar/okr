@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan migrate:fresh:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "Bash(php artisan route:list:*)",
+      "Bash(php artisan db:table:*)"
+    ]
+  }
+}

@@ -17,27 +17,27 @@ class OrgUnitEmployeeSeeder extends Seeder
             [
                 'orgunit_id' => 1, // Engineering Department
                 'employee_id' => 2, // John Manager
-                'orgunit_role_id' => 2, // Department Manager
+                'orgunit_role_id' => 2, // Manager
             ],
             [
                 'orgunit_id' => 3, // Software Development Team
                 'employee_id' => 3, // Jane Developer
-                'orgunit_role_id' => 8, // Member
+                'orgunit_role_id' => 3, // Member
             ],
             [
                 'orgunit_id' => 3, // Software Development Team
                 'employee_id' => 4, // Bob Supervisor
-                'orgunit_role_id' => 3, // Team Lead
+                'orgunit_role_id' => 1, // Team Lead
             ],
             [
                 'orgunit_id' => 4, // QA Team
                 'employee_id' => 3, // Jane Developer
-                'orgunit_role_id' => 8, // Member
+                'orgunit_role_id' => 3, // Member
             ],
             [
                 'orgunit_id' => 6, // Human Resources Department
                 'employee_id' => 5, // Alice Director
-                'orgunit_role_id' => 1, // Head of Department
+                'orgunit_role_id' => 2, // Manager
             ],
         ];
 

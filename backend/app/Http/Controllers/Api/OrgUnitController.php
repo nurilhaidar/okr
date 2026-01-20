@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrgUnit;
+use App\Models\OrgUnitEmployee;
+use App\Models\OrgUnitRole;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class OrgUnitController extends Controller
 {
@@ -248,6 +252,257 @@ class OrgUnitController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OrgUnit deleted successfully'
+        ]);
+    }
+
+    /**
+     * Get available roles for adding members.
+     * Returns all roles with information about which ones are already taken.
+     */
+    public function getAvailableRoles($id): JsonResponse
+    {
+        $orgUnit = OrgUnit::find($id);
+
+        if (!$orgUnit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OrgUnit not found'
+            ], 404);
+        }
+
+        // Get all roles
+        $allRoles = OrgUnitRole::all();
+
+        // Get taken roles (roles where is_exclusive = true)
+        $takenRoles = OrgUnitEmployee::where('orgunit_id', $id)
+            ->whereIn('orgunit_role_id', function ($query) {
+                $query->select('id')->from('orgunit_role')
+                    ->where('is_exclusive', true);
+            })
+            ->pluck('orgunit_role_id')
+            ->unique()
+            ->toArray();
+
+        // Get existing members
+        $existingMembers = OrgUnitEmployee::where('orgunit_id', $id)
+            ->with(['employee', 'orgUnitRole'])
+            ->get()
+            ->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'employee_id' => $member->employee_id,
+                    'employee_name' => $member->employee->name,
+                    'orgunit_role_id' => $member->orgunit_role_id,
+                    'role_name' => $member->orgUnitRole->name,
+                ];
+            });
+
+        $data = $allRoles->map(function ($role) use ($takenRoles) {
+            $isTaken = in_array($role->id, $takenRoles);
+
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'is_exclusive' => (bool) $role->is_exclusive,
+                'is_taken' => $isTaken,
+                'available' => !($role->is_exclusive && $isTaken),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'roles' => $data,
+                'existing_members' => $existingMembers,
+            ]
+        ]);
+    }
+
+    /**
+     * Add a member to the org unit.
+     */
+    public function addMember(Request $request, $id): JsonResponse
+    {
+        $orgUnit = OrgUnit::find($id);
+
+        if (!$orgUnit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OrgUnit not found'
+            ], 404);
+        }
+
+        $request->validate([
+            'employee_id' => 'required|exists:employee,id',
+            'orgunit_role_id' => 'required|exists:orgunit_role,id',
+        ]);
+
+        // Check if employee is already a member
+        $existingMember = OrgUnitEmployee::where('orgunit_id', $id)
+            ->where('employee_id', $request->employee_id)
+            ->first();
+
+        if ($existingMember) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee is already a member of this org unit'
+            ], 422);
+        }
+
+        // Check if the role is exclusive
+        $role = OrgUnitRole::find($request->orgunit_role_id);
+
+        if ($role->is_exclusive) {
+            // Check if this role is already taken
+            $existingRole = OrgUnitEmployee::where('orgunit_id', $id)
+                ->where('orgunit_role_id', $request->orgunit_role_id)
+                ->first();
+
+            if ($existingRole) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "This role ({$role->name}) is already assigned to another member"
+                ], 422);
+            }
+        }
+
+        // Add the member
+        $orgUnitEmployee = OrgUnitEmployee::create([
+            'orgunit_id' => $id,
+            'employee_id' => $request->employee_id,
+            'orgunit_role_id' => $request->orgunit_role_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Member added successfully',
+            'data' => $orgUnitEmployee->load(['employee', 'orgUnitRole'])
+        ], 201);
+    }
+
+    /**
+     * Update member role in the org unit.
+     */
+    public function updateMemberRole(Request $request, $id, $memberId): JsonResponse
+    {
+        $orgUnit = OrgUnit::find($id);
+
+        if (!$orgUnit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OrgUnit not found'
+            ], 404);
+        }
+
+        $orgUnitEmployee = OrgUnitEmployee::where('orgunit_id', $id)
+            ->where('id', $memberId)
+            ->first();
+
+        if (!$orgUnitEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Member not found in this org unit'
+            ], 404);
+        }
+
+        $request->validate([
+            'orgunit_role_id' => 'required|exists:orgunit_role,id',
+        ]);
+
+        // Check if the role is exclusive and already taken
+        $role = OrgUnitRole::find($request->orgunit_role_id);
+
+        if ($role->is_exclusive) {
+            $existingRole = OrgUnitEmployee::where('orgunit_id', $id)
+                ->where('orgunit_role_id', $request->orgunit_role_id)
+                ->where('id', '!=', $memberId)
+                ->first();
+
+            if ($existingRole) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "This role ({$role->name}) is already assigned to another member"
+                ], 422);
+            }
+        }
+
+        $orgUnitEmployee->update([
+            'orgunit_role_id' => $request->orgunit_role_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Member role updated successfully',
+            'data' => $orgUnitEmployee->load(['employee', 'orgUnitRole'])
+        ]);
+    }
+
+    /**
+     * Remove a member from the org unit.
+     */
+    public function removeMember($id, $memberId): JsonResponse
+    {
+        $orgUnit = OrgUnit::find($id);
+
+        if (!$orgUnit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OrgUnit not found'
+            ], 404);
+        }
+
+        $orgUnitEmployee = OrgUnitEmployee::where('orgunit_id', $id)
+            ->where('id', $memberId)
+            ->first();
+
+        if (!$orgUnitEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Member not found in this org unit'
+            ], 404);
+        }
+
+        $orgUnitEmployee->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Member removed successfully'
+        ]);
+    }
+
+    /**
+     * Get all members of an org unit with their roles.
+     */
+    public function getMembers($id): JsonResponse
+    {
+        $orgUnit = OrgUnit::find($id);
+
+        if (!$orgUnit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OrgUnit not found'
+            ], 404);
+        }
+
+        $members = OrgUnitEmployee::where('orgunit_id', $id)
+            ->with(['employee', 'orgUnitRole'])
+            ->get()
+            ->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'employee_id' => $member->employee_id,
+                    'employee_name' => $member->employee->name,
+                    'employee_email' => $member->employee->email,
+                    'employee_position' => $member->employee->position,
+                    'orgunit_role_id' => $member->orgunit_role_id,
+                    'role_name' => $member->orgUnitRole->name,
+                    'is_exclusive' => (bool) $member->orgUnitRole->is_exclusive,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $members
         ]);
     }
 }

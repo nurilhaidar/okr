@@ -110,4 +110,132 @@ export const deleteRole = async (id) => {
   return response.data
 }
 
+// OrgUnit APIs
+export const getOrgUnits = async () => {
+  const response = await api.get('/orgunits')
+  return response.data
+}
+
+export const getOrgUnit = async (id) => {
+  const response = await api.get(`/orgunits/${id}`)
+  return response.data
+}
+
+export const createOrgUnit = async (data) => {
+  const response = await api.post('/orgunits', data)
+  return response.data
+}
+
+export const updateOrgUnit = async (id, data) => {
+  const response = await api.put(`/orgunits/${id}`, data)
+  return response.data
+}
+
+export const deactivateOrgUnit = async (id) => {
+  const response = await api.patch(`/orgunits/${id}/deactivate`)
+  return response.data
+}
+
+export const activateOrgUnit = async (id) => {
+  const response = await api.patch(`/orgunits/${id}/activate`)
+  return response.data
+}
+
+export const deleteOrgUnit = async (id) => {
+  const response = await api.delete(`/orgunits/${id}`)
+  return response.data
+}
+
+export const getOrgUnitMembers = async (id) => {
+  const response = await api.get(`/orgunits/${id}/members`)
+  return response.data
+}
+
+export const getOrgUnitAvailableRoles = async (id) => {
+  const response = await api.get(`/orgunits/${id}/available-roles`)
+  return response.data
+}
+
+export const addOrgUnitMember = async (id, data) => {
+  const response = await api.post(`/orgunits/${id}/members`, data)
+  return response.data
+}
+
+export const updateOrgUnitMemberRole = async (id, memberId, data) => {
+  const response = await api.patch(`/orgunits/${id}/members/${memberId}`, data)
+  return response.data
+}
+
+export const removeOrgUnitMember = async (id, memberId) => {
+  const response = await api.delete(`/orgunits/${id}/members/${memberId}`)
+  return response.data
+}
+
+export const getOrgUnitsDatatables = async (params) => {
+  const response = await api.get('/orgunits/datatables', { params })
+  return response.data
+}
+
+// OrgUnitType APIs
+export const getOrgUnitTypes = async () => {
+  const response = await api.get('/orgunit-types')
+  return response.data
+}
+
+export const getOrgUnitType = async (id) => {
+  const response = await api.get(`/orgunit-types/${id}`)
+  return response.data
+}
+
+export const createOrgUnitType = async (data) => {
+  const response = await api.post('/orgunit-types', data)
+  return response.data
+}
+
+export const updateOrgUnitType = async (id, data) => {
+  const response = await api.put(`/orgunit-types/${id}`, data)
+  return response.data
+}
+
+export const deleteOrgUnitType = async (id) => {
+  const response = await api.delete(`/orgunit-types/${id}`)
+  return response.data
+}
+
+export const getOrgUnitTypesDatatables = async (params) => {
+  const response = await api.get('/orgunit-types/datatables', { params })
+  return response.data
+}
+
+// OrgUnitRole APIs
+export const getOrgUnitRoles = async () => {
+  const response = await api.get('/orgunit-roles')
+  return response.data
+}
+
+export const getOrgUnitRole = async (id) => {
+  const response = await api.get(`/orgunit-roles/${id}`)
+  return response.data
+}
+
+export const createOrgUnitRole = async (data) => {
+  const response = await api.post('/orgunit-roles', data)
+  return response.data
+}
+
+export const updateOrgUnitRole = async (id, data) => {
+  const response = await api.put(`/orgunit-roles/${id}`, data)
+  return response.data
+}
+
+export const deleteOrgUnitRole = async (id) => {
+  const response = await api.delete(`/orgunit-roles/${id}`)
+  return response.data
+}
+
+export const getOrgUnitRolesDatatables = async (params) => {
+  const response = await api.get('/orgunit-roles/datatables', { params })
+  return response.data
+}
+
 export default api

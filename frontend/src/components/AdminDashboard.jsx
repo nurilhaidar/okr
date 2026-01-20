@@ -50,6 +50,12 @@ const AdminDashboard = () => {
     { name: 'Roles', path: '/dashboard/roles', icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 013.138-3.138z' },
   ]
 
+  const orgUnitMenuItems = [
+    { name: 'Org Units', path: '/dashboard/orgunits', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+    { name: 'Org Unit Types', path: '/dashboard/orgunit-types', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
+    { name: 'Org Unit Roles', path: '/dashboard/orgunit-roles', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+  ]
+
   const isActive = (path) => location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path))
 
   return (
@@ -129,6 +135,29 @@ const AdminDashboard = () => {
 
             {/* Employee Management Menu */}
             {employeeMenuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); setSidebarOpen(false) }}
+                className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                  isActive(item.path)
+                    ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-md'
+                    : 'text-gray-700 hover:bg-blue-50'
+                }`}
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                </svg>
+                <span className="text-sm font-medium">{item.name}</span>
+              </button>
+            ))}
+
+            {/* Divider */}
+            <div className="pt-3 mt-3">
+              <h3 className="px-3 text-[12px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Org Unit Management</h3>
+            </div>
+
+            {/* Org Unit Management Menu */}
+            {orgUnitMenuItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setSidebarOpen(false) }}
