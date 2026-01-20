@@ -21,6 +21,7 @@ class ObjectiveSeeder extends Seeder
                 'target_type' => 'binary',
                 'target_value' => 1.0,
                 'deadline' => '2026-02-28 23:59:59',
+                'tracking_type' => 'weekly',
                 'tracker' => 3, // Jane Developer
                 'approver' => 4, // Bob Supervisor
             ],
@@ -31,6 +32,7 @@ class ObjectiveSeeder extends Seeder
                 'target_type' => 'numeric',
                 'target_value' => 95.0,
                 'deadline' => '2026-03-15 23:59:59',
+                'tracking_type' => 'weekly',
                 'tracker' => 3, // Jane Developer
                 'approver' => 4, // Bob Supervisor
             ],
@@ -41,6 +43,7 @@ class ObjectiveSeeder extends Seeder
                 'target_type' => 'numeric',
                 'target_value' => 200.0,
                 'deadline' => '2026-03-31 23:59:59',
+                'tracking_type' => 'monthly',
                 'tracker' => 3, // Jane Developer
                 'approver' => 2, // John Manager
             ],
@@ -51,6 +54,7 @@ class ObjectiveSeeder extends Seeder
                 'target_type' => 'numeric',
                 'target_value' => 5.0,
                 'deadline' => '2026-03-31 23:59:59',
+                'tracking_type' => 'quarterly',
                 'tracker' => 4, // Bob Supervisor
                 'approver' => 2, // John Manager
             ],
@@ -61,6 +65,7 @@ class ObjectiveSeeder extends Seeder
                 'target_type' => 'binary',
                 'target_value' => 1.0,
                 'deadline' => '2026-02-15 23:59:59',
+                'tracking_type' => 'daily',
                 'tracker' => 3, // Jane Developer
                 'approver' => 4, // Bob Supervisor
             ],

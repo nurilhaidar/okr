@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('target_type', ['numeric', 'binary']);
             $table->float('target_value');
             $table->dateTime('deadline');
+            $table->enum('tracking_type', ['daily', 'weekly', 'monthly', 'quarterly']);
             $table->foreignId('tracker')->constrained('employee')->cascadeOnDelete();
             $table->foreignId('approver')->constrained('employee')->cascadeOnDelete();
             $table->timestamps();
