@@ -54,6 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/objectives/by-okr/{okrId}', [ObjectiveController::class, 'getByOkr']);
     Route::get('/objectives/by-tracker/{trackerId}', [ObjectiveController::class, 'getByTracker']);
     Route::get('/objectives/by-approver/{approverId}', [ObjectiveController::class, 'getByApprover']);
+    Route::get('/objectives/{id}/progress', [ObjectiveController::class, 'getProgress']);
+    Route::get('/objectives-progress/all', [ObjectiveController::class, 'getAllProgress']);
 
     // CheckIn Routes
     Route::get('/check-ins/by-objective/{objectiveId}', [CheckInController::class, 'getByObjective']);

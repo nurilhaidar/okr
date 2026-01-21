@@ -69,4 +69,35 @@ class Okr extends Model
               });
         });
     }
+
+    /**
+     * Calculate overall progress percentage based on weighted average of objectives
+     * Each objective's contribution is: (objective_progress * objective_weight)
+     */
+    public function getProgressAttribute(): float
+    {
+        $objectives = $this->objectives;
+
+        if ($objectives->isEmpty()) {
+            return 0.0;
+        }
+
+        $totalWeight = 0.0;
+        $weightedProgress = 0.0;
+
+        foreach ($objectives as $objective) {
+            $objectiveWeight = (float) $objective->weight;
+            $objectiveProgress = $objective->progress;
+
+            $weightedProgress += ($objectiveProgress * $objectiveWeight);
+            $totalWeight += $objectiveWeight;
+        }
+
+        // Avoid division by zero
+        if ($totalWeight == 0) {
+            return 0.0;
+        }
+
+        return $weightedProgress / $totalWeight;
+    }
 }

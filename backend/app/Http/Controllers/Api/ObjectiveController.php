@@ -50,6 +50,12 @@ class ObjectiveController extends Controller
 
         $objectives = $query->orderBy('deadline', 'asc')->get();
 
+        // Append progress and current_value to each objective
+        $objectives->each(function ($objective) {
+            $objective->progress = $objective->progress;
+            $objective->current_value = $objective->current_value;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $objectives,
@@ -206,6 +212,12 @@ class ObjectiveController extends Controller
             ->orderBy('deadline', 'asc')
             ->get();
 
+        // Append progress and current_value to each objective
+        $objectives->each(function ($objective) {
+            $objective->progress = $objective->progress;
+            $objective->current_value = $objective->current_value;
+        });
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -238,6 +250,67 @@ class ObjectiveController extends Controller
         return response()->json([
             'success' => true,
             'data' => $objectives,
+        ]);
+    }
+
+    public function getProgress($id)
+    {
+        $objective = Objective::with(['okr', 'trackerEmployee', 'approverEmployee'])->find($id);
+
+        if (!$objective) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Objective not found',
+            ], 404);
+        }
+
+        $latestCheckIn = $objective->latestApprovedCheckIn();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'objective_id' => $objective->id,
+                'description' => $objective->description,
+                'target_value' => $objective->target_value,
+                'target_type' => $objective->target_type,
+                'current_value' => $objective->current_value,
+                'progress' => $objective->progress,
+                'latest_check_in' => $latestCheckIn,
+            ],
+        ]);
+    }
+
+    public function getAllProgress(Request $request)
+    {
+        $query = Objective::with(['okr', 'trackerEmployee', 'approverEmployee']);
+
+        // Filter by OKR ID if provided
+        if ($request->has('okr_id')) {
+            $query->where('okr_id', $request->okr_id);
+        }
+
+        $objectives = $query->orderBy('deadline', 'asc')->get();
+
+        // Add progress data to each objective
+        $objectivesWithProgress = $objectives->map(function ($objective) {
+            return [
+                'id' => $objective->id,
+                'description' => $objective->description,
+                'weight' => $objective->weight,
+                'target_value' => $objective->target_value,
+                'target_type' => $objective->target_type,
+                'deadline' => $objective->deadline,
+                'current_value' => $objective->current_value,
+                'progress' => $objective->progress,
+                'tracker' => $objective->trackerEmployee,
+                'approver' => $objective->approverEmployee,
+                'okr' => $objective->okr,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $objectivesWithProgress,
         ]);
     }
 }

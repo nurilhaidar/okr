@@ -10,6 +10,7 @@ class CheckInSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * All check-ins start with PENDING status by default
      */
     public function run(): void
     {
@@ -64,5 +65,7 @@ class CheckInSeeder extends Seeder
                 'updated_at' => now(),
             ]));
         }
+
+        $this->command->info('Check-ins created successfully. All check-ins will be set to PENDING status.');
     }
 }

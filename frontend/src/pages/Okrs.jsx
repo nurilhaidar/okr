@@ -31,10 +31,18 @@ const Okrs = () => {
   const [showWeightAlert, setShowWeightAlert] = useState(false)
   const [weightAlertMessage, setWeightAlertMessage] = useState('')
   const [showCheckInModal, setShowCheckInModal] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmModalConfig, setConfirmModalConfig] = useState({
+    title: '',
+    message: '',
+    onConfirm: null
+  })
   const [selectedObjective, setSelectedObjective] = useState(null)
   const [checkIns, setCheckIns] = useState([])
   const [approvalLogs, setApprovalLogs] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
+  const [expandedOkrId, setExpandedOkrId] = useState(null)
+  const [okrObjectives, setOkrObjectives] = useState({})
   const [checkInFormData, setCheckInFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     current_value: '',
@@ -88,20 +96,37 @@ const Okrs = () => {
     }
   }
 
+  // Helper function to convert percentage to decimal
+  const percentToDecimal = (percent) => {
+    const parsed = parseFloat(percent)
+    return isNaN(parsed) ? 0 : parsed / 100
+  }
+
+  // Helper function to convert decimal to percentage
+  const decimalToPercent = (decimal) => {
+    const parsed = parseFloat(decimal)
+    return isNaN(parsed) ? 0 : Math.round(parsed * 100)
+  }
+
+  // Helper function to show confirm modal
+  const showConfirm = (title, message, onConfirm) => {
+    setConfirmModalConfig({ title, message, onConfirm })
+    setShowConfirmModal(true)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       // Filter out empty objectives
       const validObjectives = formData.objectives.filter(obj => obj.description.trim() !== '')
 
-      // Validate objective weights sum to 1.0 (100%)
+      // Validate objective weights sum to 100%
       if (validObjectives.length > 0) {
-        const totalWeight = validObjectives.reduce((sum, obj) => sum + (parseFloat(obj.weight) || 0), 0)
-        const tolerance = 0.0001 // Small tolerance for floating point comparison
+        const totalWeightPercent = validObjectives.reduce((sum, obj) => sum + (parseFloat(obj.weight) || 0), 0)
+        const tolerance = 0.01 // Small tolerance for comparison
 
-        if (Math.abs(totalWeight - 1.0) > tolerance) {
-          const percentage = Math.round(totalWeight * 100)
-          setWeightAlertMessage(`Objective weights must total 100% (1.0). Current total: ${percentage}%. Please adjust the objective weights.`)
+        if (Math.abs(totalWeightPercent - 100) > tolerance) {
+          setWeightAlertMessage(`Objective weights must total 100%. Current total: ${totalWeightPercent}%. Please adjust the objective weights.`)
           setShowWeightAlert(true)
           return
         }
@@ -109,8 +134,11 @@ const Okrs = () => {
 
       const submitData = {
         ...formData,
-        weight: parseFloat(formData.weight) || 0,
-        objectives: validObjectives
+        weight: percentToDecimal(formData.weight), // Convert percentage to decimal
+        objectives: validObjectives.map(obj => ({
+          ...obj,
+          weight: percentToDecimal(obj.weight) // Convert percentage to decimal
+        }))
       }
 
       if (editingOkr) {
@@ -123,7 +151,6 @@ const Okrs = () => {
       resetForm()
     } catch (error) {
       console.error('Error saving OKR:', error)
-      alert(error.response?.data?.message || 'Error saving OKR')
     }
   }
 
@@ -131,28 +158,36 @@ const Okrs = () => {
     setEditingOkr(okr)
     setFormData({
       name: okr.name,
-      weight: okr.weight,
+      weight: decimalToPercent(okr.weight), // Convert decimal to percentage
       okr_type_id: okr.okr_type_id || '',
       start_date: okr.start_date?.split('T')[0] || '',
       end_date: okr.end_date?.split('T')[0] || '',
       owner_type: okr.owner_type,
       owner_id: okr.owner_id,
       is_active: okr.is_active,
-      objectives: okr.objectives || []
+      objectives: (okr.objectives || []).map(obj => ({
+        ...obj,
+        weight: decimalToPercent(obj.weight), // Convert decimal to percentage
+        deadline: obj.deadline?.split('T')[0] || '' // Format deadline for date input
+      }))
     })
     setShowModal(true)
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this OKR?')) {
-      try {
-        await deleteOkr(id)
-        await fetchData()
-      } catch (error) {
-        console.error('Error deleting OKR:', error)
-        alert(error.response?.data?.message || 'Error deleting OKR')
+    showConfirm(
+      'Delete OKR',
+      'Are you sure you want to delete this OKR?',
+      async () => {
+        try {
+          await deleteOkr(id)
+          await fetchData()
+          setShowConfirmModal(false)
+        } catch (error) {
+          console.error('Error deleting OKR:', error)
+        }
       }
-    }
+    )
   }
 
   const handleToggleActive = async (okr) => {
@@ -165,7 +200,6 @@ const Okrs = () => {
       await fetchData()
     } catch (error) {
       console.error('Error updating OKR status:', error)
-      alert(error.response?.data?.message || 'Error updating OKR status')
     }
   }
 
@@ -181,16 +215,20 @@ const Okrs = () => {
   }
 
   const handleDeleteObjective = async (objectiveId) => {
-    if (window.confirm('Are you sure you want to delete this objective?')) {
-      try {
-        await deleteObjective(objectiveId)
-        const response = await getObjectivesByOkr(selectedOkr.id)
-        setObjectives(response.data.objectives || [])
-      } catch (error) {
-        console.error('Error deleting objective:', error)
-        alert(error.response?.data?.message || 'Error deleting objective')
+    showConfirm(
+      'Delete Objective',
+      'Are you sure you want to delete this objective?',
+      async () => {
+        try {
+          await deleteObjective(objectiveId)
+          const response = await getObjectivesByOkr(selectedOkr.id)
+          setObjectives(response.data.objectives || [])
+          setShowConfirmModal(false)
+        } catch (error) {
+          console.error('Error deleting objective:', error)
+        }
       }
-    }
+    )
   }
 
   const addObjectiveToForm = () => {
@@ -221,6 +259,26 @@ const Okrs = () => {
   const removeObjectiveFromForm = (index) => {
     const newObjectives = formData.objectives.filter((_, i) => i !== index)
     setFormData({ ...formData, objectives: newObjectives })
+  }
+
+  const toggleOkrExpansion = async (okrId) => {
+    if (expandedOkrId === okrId) {
+      setExpandedOkrId(null)
+    } else {
+      setExpandedOkrId(okrId)
+      // Fetch objectives with progress if not already loaded
+      if (!okrObjectives[okrId]) {
+        try {
+          const response = await getObjectivesByOkr(okrId)
+          setOkrObjectives(prev => ({
+            ...prev,
+            [okrId]: response.data.objectives || []
+          }))
+        } catch (error) {
+          console.error('Error fetching objectives:', error)
+        }
+      }
+    }
   }
 
   const resetForm = () => {
@@ -299,11 +357,23 @@ const Okrs = () => {
 
       // Refresh check-ins list and approval logs
       await handleCheckIn(selectedObjective)
+      // Refresh objectives list to update progress
+      if (selectedOkr) {
+        const response = await getObjectivesByOkr(selectedOkr.id)
+        setObjectives(response.data.objectives || [])
+      }
+      // Refresh cached OKR objectives for progress display in main table
+      if (okrObjectives[selectedOkr?.id]) {
+        const objResponse = await getObjectivesByOkr(selectedOkr.id)
+        setOkrObjectives(prev => ({
+          ...prev,
+          [selectedOkr.id]: objResponse.data.objectives || []
+        }))
+      }
       // Reset form
       resetCheckInForm()
     } catch (error) {
       console.error('Error creating check-in:', error)
-      alert(error.message || 'Error creating check-in')
     }
   }
 
@@ -317,39 +387,94 @@ const Okrs = () => {
     setEvidenceFileName('')
   }
 
-  const handleApproveCheckIn = async (checkInId) => {
-    try {
-      await approveCheckIn(checkInId)
-      // Refresh check-ins and approval logs
-      await handleCheckIn(selectedObjective)
-    } catch (error) {
-      console.error('Error approving check-in:', error)
-      alert(error.response?.data?.message || 'Error approving check-in')
-    }
+  const handleApproveCheckIn = (checkInId) => {
+    showConfirm(
+      'Approve Check-In',
+      'Are you sure you want to approve this check-in?',
+      async () => {
+        try {
+          await approveCheckIn(checkInId)
+          // Refresh check-ins and approval logs
+          await handleCheckIn(selectedObjective)
+          // Refresh objectives list to update progress
+          if (selectedOkr) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setObjectives(response.data.objectives || [])
+          }
+          // Refresh cached OKR objectives for progress display in main table
+          if (okrObjectives[selectedOkr?.id]) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setOkrObjectives(prev => ({
+              ...prev,
+              [selectedOkr.id]: response.data.objectives || []
+            }))
+          }
+          setShowConfirmModal(false)
+        } catch (error) {
+          console.error('Error approving check-in:', error)
+        }
+      }
+    )
   }
 
-  const handleRejectCheckIn = async (checkInId) => {
-    try {
-      await rejectCheckIn(checkInId)
-      // Refresh check-ins and approval logs
-      await handleCheckIn(selectedObjective)
-    } catch (error) {
-      console.error('Error rejecting check-in:', error)
-      alert(error.response?.data?.message || 'Error rejecting check-in')
-    }
+  const handleRejectCheckIn = (checkInId) => {
+    showConfirm(
+      'Reject Check-In',
+      'Are you sure you want to reject this check-in?',
+      async () => {
+        try {
+          await rejectCheckIn(checkInId)
+          // Refresh check-ins and approval logs
+          await handleCheckIn(selectedObjective)
+          // Refresh objectives list to update progress
+          if (selectedOkr) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setObjectives(response.data.objectives || [])
+          }
+          // Refresh cached OKR objectives for progress display in main table
+          if (okrObjectives[selectedOkr?.id]) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setOkrObjectives(prev => ({
+              ...prev,
+              [selectedOkr.id]: response.data.objectives || []
+            }))
+          }
+          setShowConfirmModal(false)
+        } catch (error) {
+          console.error('Error rejecting check-in:', error)
+        }
+      }
+    )
   }
 
   const handleDeleteCheckIn = async (checkInId) => {
-    if (window.confirm('Are you sure you want to delete this check-in?')) {
-      try {
-        await deleteCheckIn(checkInId)
-        // Refresh check-ins and approval logs
-        await handleCheckIn(selectedObjective)
-      } catch (error) {
-        console.error('Error deleting check-in:', error)
-        alert(error.response?.data?.message || 'Error deleting check-in')
+    showConfirm(
+      'Delete Check-In',
+      'Are you sure you want to delete this check-in?',
+      async () => {
+        try {
+          await deleteCheckIn(checkInId)
+          // Refresh check-ins and approval logs
+          await handleCheckIn(selectedObjective)
+          // Refresh objectives list to update progress
+          if (selectedOkr) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setObjectives(response.data.objectives || [])
+          }
+          // Refresh cached OKR objectives for progress display in main table
+          if (okrObjectives[selectedOkr?.id]) {
+            const response = await getObjectivesByOkr(selectedOkr.id)
+            setOkrObjectives(prev => ({
+              ...prev,
+              [selectedOkr.id]: response.data.objectives || []
+            }))
+          }
+          setShowConfirmModal(false)
+        } catch (error) {
+          console.error('Error deleting check-in:', error)
+        }
       }
-    }
+    )
   }
 
   const getStatusBadge = (status) => {
@@ -501,6 +626,7 @@ const Okrs = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Owner</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Period</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">OKR Progress</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Objectives</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
@@ -509,7 +635,7 @@ const Okrs = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredOkrs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                     <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
@@ -519,99 +645,224 @@ const Okrs = () => {
                 </tr>
               ) : (
                 filteredOkrs.map((okr) => (
-                  <tr key={okr.id} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center mr-3">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                  <>
+                    <tr key={okr.id} className="hover:bg-blue-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => toggleOkrExpansion(okr.id)}
+                            className="mr-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                            title={expandedOkrId === okr.id ? 'Collapse' : 'Expand'}
+                          >
+                            <svg
+                              className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${expandedOkrId === okr.id ? 'rotate-90' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center mr-3">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{okr.name}</div>
+                            <div className="text-xs text-gray-500">Weight: {decimalToPercent(okr.weight)}%</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{okr.name}</div>
-                          <div className="text-xs text-gray-500">Weight: {okr.weight}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {okr.okr_type?.name || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">{getOwnerName(okr)}</div>
+                          <div className="text-xs text-gray-500">{getOwnerTypeLabel(okr.owner_type)}</div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        {okr.okr_type?.name || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">{getOwnerName(okr)}</div>
-                        <div className="text-xs text-gray-500">{getOwnerTypeLabel(okr.owner_type)}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700">
-                        <div>{okr.start_date ? new Date(okr.start_date).toLocaleDateString() : 'N/A'}</div>
-                        <div className="text-xs text-gray-500">to {okr.end_date ? new Date(okr.end_date).toLocaleDateString() : 'N/A'}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleManageObjectives(okr)}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        {okr.objectives?.length || 0} Objectives
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        okr.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {okr.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-700">
+                          <div>{okr.start_date ? new Date(okr.start_date).toLocaleDateString() : 'N/A'}</div>
+                          <div className="text-xs text-gray-500">to {okr.end_date ? new Date(okr.end_date).toLocaleDateString() : 'N/A'}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="w-32">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600">Progress</span>
+                            <span className={`text-xs font-semibold ${
+                              (okr.progress || 0) >= 100
+                                ? 'text-green-700'
+                                : (okr.progress || 0) >= 50
+                                ? 'text-blue-700'
+                                : (okr.progress || 0) >= 25
+                                ? 'text-yellow-700'
+                                : 'text-red-700'
+                            }`}>
+                              {Math.round(okr.progress || 0)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                (okr.progress || 0) >= 100
+                                  ? 'bg-gradient-to-r from-green-500 to-green-400'
+                                  : (okr.progress || 0) >= 50
+                                  ? 'bg-gradient-to-r from-blue-500 to-blue-400'
+                                  : (okr.progress || 0) >= 25
+                                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-400'
+                                  : 'bg-gradient-to-r from-red-500 to-red-400'
+                              }`}
+                              style={{ width: `${Math.min(okr.progress || 0, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
                         <button
                           onClick={() => handleManageObjectives(okr)}
-                          className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
-                          title="Manage Objectives"
+                          className="text-sm text-primary hover:underline"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
+                          {okr.objectives?.length || 0} Objectives
                         </button>
-                        <button
-                          onClick={() => handleToggleActive(okr)}
-                          className={`p-2 ${okr.is_active ? 'text-orange-500 hover:bg-orange-100' : 'text-green-500 hover:bg-green-100'} rounded-lg transition-colors`}
-                          title={okr.is_active ? 'Deactivate' : 'Activate'}
-                        >
-                          {okr.is_active ? (
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          okr.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {okr.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleManageObjectives(okr)}
+                            className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Manage Objectives"
+                          >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
-                          ) : (
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(okr)}
+                            className={`p-2 ${okr.is_active ? 'text-orange-500 hover:bg-orange-100' : 'text-green-500 hover:bg-green-100'} rounded-lg transition-colors`}
+                            title={okr.is_active ? 'Deactivate' : 'Activate'}
+                          >
+                            {okr.is_active ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleEdit(okr)}
+                            className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Edit"
+                          >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleEdit(okr)}
-                          className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(okr.id)}
-                          className="p-2 text-accent hover:bg-red-100 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(okr.id)}
+                            className="p-2 text-accent hover:bg-red-100 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Expanded Row - Objectives Progress */}
+                    {expandedOkrId === okr.id && (
+                      <tr key={`${okr.id}-expanded`} className="bg-blue-50/30">
+                        <td colSpan="8" className="px-6 py-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold text-gray-700">Objectives Progress</h4>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-600">OKR Overall Progress:</span>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                                  (okr.progress || 0) >= 100
+                                    ? 'bg-green-100 text-green-800'
+                                    : (okr.progress || 0) >= 50
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : (okr.progress || 0) >= 25
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {Math.round(okr.progress || 0)}%
+                                </span>
+                              </div>
+                            </div>
+                            {okrObjectives[okr.id]?.length > 0 ? (
+                              okrObjectives[okr.id].map((objective) => (
+                                <div key={objective.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium text-sm text-gray-900">{objective.description}</span>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                          {decimalToPercent(objective.weight)}%
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Deadline: {new Date(objective.deadline).toLocaleDateString()} • Tracker: {objective.tracker_employee?.name || 'N/A'} • Approver: {objective.approver_employee?.name || 'N/A'}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-4">
+                                      <span className="text-sm text-gray-600">
+                                        {objective.current_value || 0} / {objective.target_value}
+                                      </span>
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                        (objective.progress || 0) >= 100
+                                          ? 'bg-green-100 text-green-800'
+                                          : (objective.progress || 0) >= 50
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : (objective.progress || 0) >= 25
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : 'bg-red-100 text-red-800'
+                                      }`}>
+                                        {Math.round(objective.progress || 0)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                        (objective.progress || 0) >= 100
+                                          ? 'bg-gradient-to-r from-green-500 to-green-400'
+                                          : (objective.progress || 0) >= 50
+                                          ? 'bg-gradient-to-r from-blue-500 to-blue-400'
+                                          : (objective.progress || 0) >= 25
+                                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-400'
+                                          : 'bg-gradient-to-r from-red-500 to-red-400'
+                                      }`}
+                                      style={{ width: `${Math.min(objective.progress || 0, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-gray-500">Loading objectives...</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))
               )}
             </tbody>
@@ -643,16 +894,16 @@ const Okrs = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Weight *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (%) *</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    max="1"
+                    max="100"
                     required
                     value={formData.weight}
                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    placeholder="e.g., 0.5"
+                    placeholder="e.g., 50"
                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
                   />
                 </div>
@@ -779,15 +1030,15 @@ const Okrs = () => {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">Weight *</label>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Weight (%) *</label>
                             <input
                               type="number"
                               step="0.01"
                               min="0"
-                              max="1"
+                              max="100"
                               value={objective.weight}
                               onChange={(e) => updateObjectiveInForm(index, 'weight', e.target.value)}
-                              placeholder="0.5"
+                              placeholder="50"
                               className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none text-sm"
                             />
                           </div>
@@ -942,12 +1193,12 @@ const Okrs = () => {
                 <div className="grid gap-4">
                   {objectives.map((objective) => (
                     <div key={objective.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-primary transition-colors">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h4 className="font-semibold text-gray-900">{objective.description}</h4>
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              Weight: {objective.weight}
+                              Weight: {decimalToPercent(objective.weight)}%
                             </span>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
@@ -988,6 +1239,43 @@ const Okrs = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">Progress</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">
+                              {objective.current_value || 0} / {objective.target_value}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              (objective.progress || 0) >= 100
+                                ? 'bg-green-100 text-green-800'
+                                : (objective.progress || 0) >= 50
+                                ? 'bg-blue-100 text-blue-800'
+                                : (objective.progress || 0) >= 25
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {Math.round(objective.progress || 0)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ease-out ${
+                              (objective.progress || 0) >= 100
+                                ? 'bg-gradient-to-r from-green-500 to-green-400'
+                                : (objective.progress || 0) >= 50
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-400'
+                                : (objective.progress || 0) >= 25
+                                ? 'bg-gradient-to-r from-yellow-500 to-yellow-400'
+                                : 'bg-gradient-to-r from-red-500 to-red-400'
+                            }`}
+                            style={{ width: `${Math.min(objective.progress || 0, 100)}%` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1258,6 +1546,41 @@ const Okrs = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <svg className="w-8 h-8 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 className="text-xl font-bold text-gray-900">{confirmModalConfig.title}</h3>
+              </div>
+              <p className="text-gray-700 mb-6">{confirmModalConfig.message}</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmModalConfig.onConfirm) {
+                      confirmModalConfig.onConfirm()
+                    }
+                  }}
+                  className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
+                >
+                  Confirm
+                </button>
               </div>
             </div>
           </div>

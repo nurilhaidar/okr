@@ -9,6 +9,23 @@ const Dashboard = () => {
   const [pendingApprovals, setPendingApprovals] = useState([])
   const [loadingApprovals, setLoadingApprovals] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'danger' // 'danger' or 'info'
+  })
+
+  const showConfirmModal = (title, message, onConfirm, type = 'danger') => {
+    setModalConfig({ title, message, onConfirm, type })
+    setShowModal(true)
+  }
+
+  const showErrorModal = (title, message) => {
+    setModalConfig({ title, message, onConfirm: () => setShowModal(false), type: 'info' })
+    setShowModal(true)
+  }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -53,42 +70,67 @@ const Dashboard = () => {
     }
   }, [currentUser])
 
-  const handleApprove = async (checkInId) => {
-    try {
-      await approveCheckIn(checkInId)
-      // Refresh pending approvals
-      const response = await getPendingApprovals()
-      setPendingApprovals(response.data || [])
-    } catch (err) {
-      console.error('Failed to approve check-in:', err)
-      alert(err.response?.data?.message || 'Failed to approve check-in')
-    }
+  const handleApprove = (checkInId) => {
+    showConfirmModal(
+      'Approve Check-In',
+      'Are you sure you want to approve this check-in?',
+      async () => {
+        try {
+          await approveCheckIn(checkInId)
+          // Refresh pending approvals
+          const response = await getPendingApprovals()
+          setPendingApprovals(response.data || [])
+          setShowModal(false)
+          // Show success message
+          showErrorModal('Success', 'Check-in approved successfully!')
+        } catch (err) {
+          console.error('Failed to approve check-in:', err)
+          setShowModal(false)
+          showErrorModal('Error', err.response?.data?.message || 'Failed to approve check-in')
+        }
+      }
+    )
   }
 
-  const handleReject = async (checkInId) => {
-    try {
-      await rejectCheckIn(checkInId)
-      // Refresh pending approvals
-      const response = await getPendingApprovals()
-      setPendingApprovals(response.data || [])
-    } catch (err) {
-      console.error('Failed to reject check-in:', err)
-      alert(err.response?.data?.message || 'Failed to reject check-in')
-    }
+  const handleReject = (checkInId) => {
+    showConfirmModal(
+      'Reject Check-In',
+      'Are you sure you want to reject this check-in?',
+      async () => {
+        try {
+          await rejectCheckIn(checkInId)
+          // Refresh pending approvals
+          const response = await getPendingApprovals()
+          setPendingApprovals(response.data || [])
+          setShowModal(false)
+          // Show success message
+          showErrorModal('Success', 'Check-in rejected successfully!')
+        } catch (err) {
+          console.error('Failed to reject check-in:', err)
+          setShowModal(false)
+          showErrorModal('Error', err.response?.data?.message || 'Failed to reject check-in')
+        }
+      }
+    )
   }
 
   const handleDelete = async (checkInId) => {
-    if (window.confirm('Are you sure you want to delete this check-in?')) {
-      try {
-        await deleteCheckIn(checkInId)
-        // Refresh pending approvals
-        const response = await getPendingApprovals()
-        setPendingApprovals(response.data || [])
-      } catch (err) {
-        console.error('Failed to delete check-in:', err)
-        alert(err.response?.data?.message || 'Failed to delete check-in')
+    showConfirmModal(
+      'Delete Check-In',
+      'Are you sure you want to delete this check-in?',
+      async () => {
+        try {
+          await deleteCheckIn(checkInId)
+          // Refresh pending approvals
+          const response = await getPendingApprovals()
+          setPendingApprovals(response.data || [])
+          setShowModal(false)
+        } catch (err) {
+          console.error('Failed to delete check-in:', err)
+          showErrorModal('Error', err.response?.data?.message || 'Failed to delete check-in')
+        }
       }
-    }
+    )
   }
 
   const canDeleteCheckIn = () => {
@@ -313,6 +355,63 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Confirm/Error Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                {modalConfig.type === 'danger' ? (
+                  <svg className="w-8 h-8 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg className="w-8 h-8 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                <h3 className="text-xl font-bold text-gray-900">{modalConfig.title}</h3>
+              </div>
+              <p className="text-gray-700 mb-6">{modalConfig.message}</p>
+              <div className="flex justify-end gap-3">
+                {modalConfig.type === 'danger' ? (
+                  <>
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (modalConfig.onConfirm) {
+                          modalConfig.onConfirm()
+                        }
+                      }}
+                      className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowModal(false)
+                      if (modalConfig.onConfirm) {
+                        modalConfig.onConfirm()
+                      }
+                    }}
+                    className="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors"
+                  >
+                    OK
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

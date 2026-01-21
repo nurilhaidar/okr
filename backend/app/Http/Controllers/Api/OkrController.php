@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\OrgUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class OkrController extends Controller
 {
@@ -46,6 +47,15 @@ class OkrController extends Controller
         }
 
         $okrs = $query->orderBy('created_at', 'desc')->get();
+
+        // Append progress to each OKR
+        $okrs->each(function ($okr) {
+            // Load objectives with their progress to calculate OKR progress
+            $okr->load(['objectives' => function ($query) {
+                $query->with(['trackerEmployee', 'approverEmployee']);
+            }]);
+            $okr->progress = $okr->progress;
+        });
 
         return response()->json([
             'success' => true,
@@ -130,6 +140,9 @@ class OkrController extends Controller
 
         $okr->load(['owner', 'okrType', 'objectives']);
 
+        // Append progress
+        $okr->progress = $okr->progress;
+
         return response()->json([
             'success' => true,
             'message' => 'OKR created successfully',
@@ -147,6 +160,9 @@ class OkrController extends Controller
                 'message' => 'OKR not found',
             ], 404);
         }
+
+        // Append progress
+        $okr->progress = $okr->progress;
 
         return response()->json([
             'success' => true,
@@ -171,9 +187,22 @@ class OkrController extends Controller
             'okr_type_id' => 'integer|exists:okr_type,id',
             'start_date' => 'date',
             'end_date' => 'date|after:start_date',
-            'owner_type' => 'in:App\\\Models\\\Employee,App\\\Models\\\OrgUnit',
+            'owner_type' => [
+                'sometimes',
+                Rule::in(['App\Models\Employee', 'App\Models\OrgUnit'])
+            ],
             'owner_id' => 'integer',
             'is_active' => 'boolean',
+            'objectives' => 'array',
+            'objectives.*.id' => 'integer|exists:objective,id',
+            'objectives.*.description' => 'string',
+            'objectives.*.weight' => 'numeric|min:0|max:1',
+            'objectives.*.target_type' => 'in:numeric,binary',
+            'objectives.*.target_value' => 'numeric',
+            'objectives.*.deadline' => 'date',
+            'objectives.*.tracking_type' => 'in:daily,weekly,monthly,quarterly',
+            'objectives.*.tracker' => 'integer|exists:employee,id',
+            'objectives.*.approver' => 'integer|exists:employee,id',
         ]);
 
         if ($validator->fails()) {
@@ -186,7 +215,32 @@ class OkrController extends Controller
 
         $okr->update($request->only(['name', 'weight', 'okr_type_id', 'start_date', 'end_date', 'owner_type', 'owner_id', 'is_active']));
 
+        // Update objectives if provided
+        if ($request->has('objectives')) {
+            foreach ($request->objectives as $objectiveData) {
+                if (isset($objectiveData['id'])) {
+                    // Update existing objective
+                    $objective = \App\Models\Objective::find($objectiveData['id']);
+                    if ($objective && $objective->okr_id == $okr->id) {
+                        $objective->update([
+                            'description' => $objectiveData['description'],
+                            'weight' => $objectiveData['weight'],
+                            'target_type' => $objectiveData['target_type'],
+                            'target_value' => $objectiveData['target_value'],
+                            'deadline' => $objectiveData['deadline'],
+                            'tracking_type' => $objectiveData['tracking_type'],
+                            'tracker' => $objectiveData['tracker'],
+                            'approver' => $objectiveData['approver'],
+                        ]);
+                    }
+                }
+            }
+        }
+
         $okr->load(['owner', 'okrType', 'objectives']);
+
+        // Append progress
+        $okr->progress = $okr->progress;
 
         return response()->json([
             'success' => true,
@@ -226,6 +280,10 @@ class OkrController extends Controller
         }
 
         $okr->update(['is_active' => true]);
+        $okr->load(['objectives']);
+
+        // Append progress
+        $okr->progress = $okr->progress;
 
         return response()->json([
             'success' => true,
@@ -246,6 +304,10 @@ class OkrController extends Controller
         }
 
         $okr->update(['is_active' => false]);
+        $okr->load(['objectives']);
+
+        // Append progress
+        $okr->progress = $okr->progress;
 
         return response()->json([
             'success' => true,

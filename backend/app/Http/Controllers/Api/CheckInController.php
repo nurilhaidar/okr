@@ -222,7 +222,7 @@ class CheckInController extends Controller
         $employee->load('role');
 
         // Verify the employee is the approver for this objective OR is an admin
-        $isAdmin = $employee->role && $employee->role->name === 'admin';
+        $isAdmin = $employee->role && $employee->role->name === 'Admin';
         if (!$isAdmin && $checkIn->objective->approver !== $employee->id) {
             return response()->json([
                 'success' => false,
