@@ -238,4 +238,168 @@ export const getOrgUnitRolesDatatables = async (params) => {
   return response.data
 }
 
+// OKR APIs
+export const getOkrs = async (params) => {
+  const response = await api.get('/okrs', { params })
+  return response.data
+}
+
+export const getOkr = async (id) => {
+  const response = await api.get(`/okrs/${id}`)
+  return response.data
+}
+
+export const createOkr = async (data) => {
+  const response = await api.post('/okrs', data)
+  return response.data
+}
+
+export const updateOkr = async (id, data) => {
+  const response = await api.put(`/okrs/${id}`, data)
+  return response.data
+}
+
+export const deleteOkr = async (id) => {
+  const response = await api.delete(`/okrs/${id}`)
+  return response.data
+}
+
+export const activateOkr = async (id) => {
+  const response = await api.patch(`/okrs/${id}/activate`)
+  return response.data
+}
+
+export const deactivateOkr = async (id) => {
+  const response = await api.patch(`/okrs/${id}/deactivate`)
+  return response.data
+}
+
+export const getAvailableOwners = async () => {
+  const response = await api.get('/okrs/available-owners')
+  return response.data
+}
+
+// OKR Type APIs
+export const getOkrTypes = async () => {
+  const response = await api.get('/okr-types')
+  return response.data
+}
+
+export const getOkrType = async (id) => {
+  const response = await api.get(`/okr-types/${id}`)
+  return response.data
+}
+
+export const createOkrType = async (data) => {
+  const response = await api.post('/okr-types', data)
+  return response.data
+}
+
+export const updateOkrType = async (id, data) => {
+  const response = await api.put(`/okr-types/${id}`, data)
+  return response.data
+}
+
+export const deleteOkrType = async (id) => {
+  const response = await api.delete(`/okr-types/${id}`)
+  return response.data
+}
+
+// Objective APIs
+export const getObjectives = async (params) => {
+  const response = await api.get('/objectives', { params })
+  return response.data
+}
+
+export const getObjective = async (id) => {
+  const response = await api.get(`/objectives/${id}`)
+  return response.data
+}
+
+export const createObjective = async (data) => {
+  const response = await api.post('/objectives', data)
+  return response.data
+}
+
+export const updateObjective = async (id, data) => {
+  const response = await api.put(`/objectives/${id}`, data)
+  return response.data
+}
+
+export const deleteObjective = async (id) => {
+  const response = await api.delete(`/objectives/${id}`)
+  return response.data
+}
+
+export const getObjectivesByOkr = async (okrId) => {
+  const response = await api.get(`/objectives/by-okr/${okrId}`)
+  return response.data
+}
+
+export const getObjectivesByTracker = async (trackerId) => {
+  const response = await api.get(`/objectives/by-tracker/${trackerId}`)
+  return response.data
+}
+
+export const getObjectivesByApprover = async (approverId) => {
+  const response = await api.get(`/objectives/by-approver/${approverId}`)
+  return response.data
+}
+
+// CheckIn APIs
+export const getCheckIns = async (params) => {
+  const response = await api.get('/check-ins', { params })
+  return response.data
+}
+
+export const getCheckIn = async (id) => {
+  const response = await api.get(`/check-ins/${id}`)
+  return response.data
+}
+
+export const createCheckIn = async (data) => {
+  const response = await api.post('/check-ins', data)
+  return response.data
+}
+
+export const updateCheckIn = async (id, data) => {
+  const response = await api.put(`/check-ins/${id}`, data)
+  return response.data
+}
+
+export const deleteCheckIn = async (id) => {
+  const response = await api.delete(`/check-ins/${id}`)
+  return response.data
+}
+
+export const getCheckInsByObjective = async (objectiveId) => {
+  const response = await api.get(`/check-ins/by-objective/${objectiveId}`)
+  return response.data
+}
+
+export const getCheckInsByTracker = async (trackerId) => {
+  const response = await api.get(`/check-ins/by-tracker/${trackerId}`)
+  return response.data
+}
+
+export const approveCheckIn = async (id) => {
+  const response = await api.post(`/check-ins/${id}/approve`)
+  return response.data
+}
+
+export const rejectCheckIn = async (id) => {
+  const response = await api.post(`/check-ins/${id}/reject`)
+  return response.data
+}
+
+export const getCheckInApprovalLogs = async (id) => {
+  const response = await api.get(`/check-ins/${id}/approval-logs`)
+  return response.data
+}
+
+export const getPendingApprovals = async () => {
+  const response = await api.get('/check-ins/pending-approvals')
+  return response.data
+}
+
 export default api

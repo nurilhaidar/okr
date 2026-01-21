@@ -49,4 +49,9 @@ class Employee extends Authenticatable
             ->withPivot('orgunit_role_id')
             ->withTimestamps();
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

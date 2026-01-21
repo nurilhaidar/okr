@@ -56,24 +56,17 @@ const AdminDashboard = () => {
     { name: 'Org Unit Roles', path: '/dashboard/orgunit-roles', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   ]
 
+  const okrMenuItems = [
+    { name: 'OKR', path: '/dashboard/okrs', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { name: 'OKR Types', path: '/dashboard/okr-types', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
+  ]
+
   const isActive = (path) => location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path))
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-
       {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+      <aside className="fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl">
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -173,6 +166,29 @@ const AdminDashboard = () => {
                 <span className="text-sm font-medium">{item.name}</span>
               </button>
             ))}
+
+            {/* Divider */}
+            <div className="pt-3 mt-3">
+              <h3 className="px-3 text-[12px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">OKR Management</h3>
+            </div>
+
+            {/* OKR Management Menu */}
+            {okrMenuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); setSidebarOpen(false) }}
+                className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                  isActive(item.path)
+                    ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-md'
+                    : 'text-gray-700 hover:bg-blue-50'
+                }`}
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                </svg>
+                <span className="text-sm font-medium">{item.name}</span>
+              </button>
+            ))}
           </nav>
 
           {/* Logout Button */}
@@ -192,33 +208,6 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="lg:ml-64">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-100">
-          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* Page Content */}
         <main>
           <Outlet />

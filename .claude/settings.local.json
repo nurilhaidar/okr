@@ -5,7 +5,10 @@
       "Bash(git checkout:*)",
       "Bash(git restore:*)",
       "Bash(php artisan route:list:*)",
-      "Bash(php artisan db:table:*)"
+      "Bash(php artisan db:table:*)",
+      "Bash(npm run build:*)",
+      "Bash(del:*)",
+      "Bash(php:*)"
     ]
   }
 }

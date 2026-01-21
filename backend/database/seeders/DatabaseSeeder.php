@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             OrgUnitSeeder::class,
             EmployeeSeeder::class,
             OrgUnitEmployeeSeeder::class,
+            OkrTypeSeeder::class,
             OKRSeeder::class,
             ObjectiveSeeder::class,
             DelegationSeeder::class,

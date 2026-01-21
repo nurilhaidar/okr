@@ -244,76 +244,72 @@ const OrgUnits = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Org Units
-          </h1>
+          <h2 className="text-2xl font-bold text-gray-900">Org Units</h2>
           <p className="text-gray-600 mt-1">Manage organizational units and their members</p>
         </div>
         <button
           onClick={() => { setShowModal(true); resetForm() }}
-          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200 shadow-md hover:shadow-lg"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0h6" />
           </svg>
-          <span className="font-medium">Add Org Unit</span>
+          Add Org Unit
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-4 mb-6 space-y-4">
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search org units..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
-          />
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search org units..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
+        />
+      </div>
+
+      {/* Status Filter */}
+      <div className="flex items-center space-x-2 mb-6">
+        <span className="text-sm font-medium text-gray-700">Status:</span>
+        <div className="flex rounded-lg overflow-hidden border-2 border-gray-200">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              statusFilter === 'all'
+                ? 'bg-primary text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+              statusFilter === 'active'
+                ? 'bg-green-500 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatusFilter('inactive')}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+              statusFilter === 'inactive'
+                ? 'bg-red-500 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Inactive
+          </button>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium text-gray-700">Status:</span>
-          <div className="flex rounded-lg overflow-hidden border-2 border-gray-200">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                statusFilter === 'all'
-                  ? 'bg-primary text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setStatusFilter('active')}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
-                statusFilter === 'active'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setStatusFilter('inactive')}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
-                statusFilter === 'inactive'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Inactive
-            </button>
-          </div>
-          <span className="text-sm text-gray-500 ml-2">
-            ({filteredOrgUnits.length} {filteredOrgUnits.length === 1 ? 'unit' : 'units'})
-          </span>
-        </div>
+        <span className="text-sm text-gray-500 ml-2">
+          ({filteredOrgUnits.length} {filteredOrgUnits.length === 1 ? 'unit' : 'units'})
+        </span>
       </div>
 
       <div className="grid gap-4">
@@ -382,23 +378,19 @@ const OrgUnits = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleManageMembers(orgUnit)}
-                      className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
+                      title="Members"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
-                      <span>Members</span>
                     </button>
                     <button
                       onClick={() => handleToggleActive(orgUnit)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        orgUnit.is_active
-                          ? 'text-amber-600 hover:bg-amber-100'
-                          : 'text-green-600 hover:bg-green-100'
-                      }`}
+                      className={`p-2 ${orgUnit.is_active ? 'text-orange-500 hover:bg-orange-100' : 'text-green-500 hover:bg-green-100'} rounded-lg transition-colors`}
                       title={orgUnit.is_active ? 'Deactivate' : 'Activate'}
                     >
                       {orgUnit.is_active ? (
@@ -407,14 +399,13 @@ const OrgUnits = () => {
                         </svg>
                       ) : (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
                     </button>
                     <button
                       onClick={() => handleEdit(orgUnit)}
-                      className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                      className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
                       title="Edit"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,7 +414,7 @@ const OrgUnits = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(orgUnit.id)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                      className="p-2 text-accent hover:bg-red-100 rounded-lg transition-colors"
                       title="Delete"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -507,19 +498,19 @@ const OrgUnits = () => {
                 />
                 <label htmlFor="isActive" className="ml-3 text-sm font-medium text-gray-700">Active</label>
               </div>
-              <div className="flex space-x-3 pt-4">
+              <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => { setShowModal(false); resetForm() }}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200"
                 >
-                  {editingOrgUnit ? 'Update' : 'Create'}
+                  {editingOrgUnit ? 'Update' : 'Create'} Org Unit
                 </button>
               </div>
             </form>
@@ -549,12 +540,12 @@ const OrgUnits = () => {
             <div className="p-6 border-b border-gray-200">
               <button
                 onClick={() => setShowAddMemberModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200"
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200 shadow-md hover:shadow-lg"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0h6" />
                 </svg>
-                <span className="font-medium">Add Member</span>
+                Add Member
               </button>
             </div>
 
@@ -670,17 +661,17 @@ const OrgUnits = () => {
                   <p className="text-xs text-amber-600 mt-1">All exclusive roles are taken. Only Member role is available.</p>
                 )}
               </div>
-              <div className="flex space-x-3 pt-4">
+              <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => { setShowAddMemberModal(false); setMemberFormData({ employee_id: '', orgunit_role_id: '' }) }}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200"
                 >
                   Add Member
                 </button>
@@ -707,16 +698,16 @@ const OrgUnits = () => {
               <p className="text-sm text-red-600 bg-red-50 rounded-lg p-3 mb-6">
                 This will prevent the org unit from being used in the system.
               </p>
-              <div className="flex space-x-3">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={() => { setShowDeactivateModal(false); setOrgUnitToDeactivate(null) }}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeactivate}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200"
                 >
                   Deactivate
                 </button>
@@ -743,16 +734,16 @@ const OrgUnits = () => {
               <p className="text-sm text-green-600 bg-green-50 rounded-lg p-3 mb-6">
                 This will make the org unit available for use in the system.
               </p>
-              <div className="flex space-x-3">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={() => { setShowActivateModal(false); setOrgUnitToActivate(null) }}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmActivate}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200"
                 >
                   Activate
                 </button>

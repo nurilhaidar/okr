@@ -88,25 +88,24 @@ const OrgUnitRoles = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Org Unit Roles
-          </h1>
+          <h2 className="text-2xl font-bold text-gray-900">Org Unit Roles</h2>
           <p className="text-gray-600 mt-1">Manage organizational unit roles</p>
         </div>
         <button
           onClick={() => { setShowModal(true); resetForm() }}
-          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200 shadow-md hover:shadow-lg"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0h6" />
           </svg>
-          <span className="font-medium">Add Role</span>
+          Add Role
         </button>
       </div>
 
+      {/* Info Banner */}
       <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
         <div className="flex items-start">
           <svg className="w-6 h-6 text-amber-600 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,19 +122,15 @@ const OrgUnitRoles = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 p-4 mb-6">
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search org unit roles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
-          />
-        </div>
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search org unit roles..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
+        />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-100 overflow-hidden">
@@ -211,10 +206,10 @@ const OrgUnitRoles = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleEdit(role)}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                            className="p-2 text-primary hover:bg-blue-100 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +218,7 @@ const OrgUnitRoles = () => {
                           </button>
                           <button
                             onClick={() => handleDelete(role.id)}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                            className="p-2 text-accent hover:bg-red-100 rounded-lg transition-colors"
                             title="Delete"
                             disabled={isPredefined}
                           >
@@ -293,19 +288,19 @@ const OrgUnitRoles = () => {
                   </div>
                 )}
               </div>
-              <div className="flex space-x-3 pt-4">
+              <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => { setShowModal(false); resetForm() }}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  className="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl hover:from-primary-dark hover:to-primary transition-all duration-200"
                 >
-                  {editingRole ? 'Update' : 'Create'}
+                  {editingRole ? 'Update' : 'Create'} Role
                 </button>
               </div>
             </form>

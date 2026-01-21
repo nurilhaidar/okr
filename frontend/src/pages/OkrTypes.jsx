@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { getOrgUnitTypes, createOrgUnitType, updateOrgUnitType, deleteOrgUnitType } from '../services/api'
+import { getOkrTypes, createOkrType, updateOkrType, deleteOkrType } from '../services/api'
 
-const OrgUnitTypes = () => {
-  const [orgUnitTypes, setOrgUnitTypes] = useState([])
+const OkrTypes = () => {
+  const [okrTypes, setOkrTypes] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingType, setEditingType] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
-    name: ''
+    name: '',
+    is_employee: false
   })
 
   useEffect(() => {
@@ -17,10 +18,10 @@ const OrgUnitTypes = () => {
 
   const fetchData = async () => {
     try {
-      const response = await getOrgUnitTypes()
-      setOrgUnitTypes(response.data)
+      const response = await getOkrTypes()
+      setOkrTypes(response.data)
     } catch (error) {
-      console.error('Error fetching org unit types:', error)
+      console.error('Error fetching OKR types:', error)
     } finally {
       setLoading(false)
     }
@@ -30,47 +31,49 @@ const OrgUnitTypes = () => {
     e.preventDefault()
     try {
       if (editingType) {
-        await updateOrgUnitType(editingType.id, formData)
+        await updateOkrType(editingType.id, formData)
       } else {
-        await createOrgUnitType(formData)
+        await createOkrType(formData)
       }
       await fetchData()
       setShowModal(false)
       resetForm()
     } catch (error) {
-      console.error('Error saving org unit type:', error)
-      alert(error.response?.data?.message || 'Error saving org unit type')
+      console.error('Error saving OKR type:', error)
+      alert(error.response?.data?.message || 'Error saving OKR type')
     }
   }
 
   const handleEdit = (type) => {
     setEditingType(type)
     setFormData({
-      name: type.name
+      name: type.name,
+      is_employee: type.is_employee
     })
     setShowModal(true)
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this org unit type?')) {
+    if (window.confirm('Are you sure you want to delete this OKR type?')) {
       try {
-        await deleteOrgUnitType(id)
+        await deleteOkrType(id)
         await fetchData()
       } catch (error) {
-        console.error('Error deleting org unit type:', error)
-        alert(error.response?.data?.message || 'Error deleting org unit type')
+        console.error('Error deleting OKR type:', error)
+        alert(error.response?.data?.message || 'Error deleting OKR type')
       }
     }
   }
 
   const resetForm = () => {
     setFormData({
-      name: ''
+      name: '',
+      is_employee: false
     })
     setEditingType(null)
   }
 
-  const filteredTypes = orgUnitTypes.filter(type =>
+  const filteredTypes = okrTypes.filter(type =>
     type.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -86,8 +89,8 @@ const OrgUnitTypes = () => {
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Org Unit Types</h2>
-          <p className="text-gray-600 mt-1">Manage organizational unit types</p>
+          <h2 className="text-2xl font-bold text-gray-900">OKR Types</h2>
+          <p className="text-gray-600 mt-1">Manage OKR types (Individual, Team, Department, Company)</p>
         </div>
         <button
           onClick={() => { setShowModal(true); resetForm() }}
@@ -104,7 +107,7 @@ const OrgUnitTypes = () => {
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Search org unit types..."
+          placeholder="Search OKR types..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
@@ -117,19 +120,20 @@ const OrgUnitTypes = () => {
             <thead className="bg-gradient-to-r from-blue-50 to-red-50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Org Units Count</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Owner Type</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">OKRs Count</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredTypes.length === 0 ? (
                 <tr>
-                  <td colSpan="3" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
                     <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <p className="text-lg font-medium">No org unit types found</p>
-                    <p className="text-sm mt-1">Create a new org unit type to get started</p>
+                    <p className="text-lg font-medium">No OKR types found</p>
+                    <p className="text-sm mt-1">Create a new OKR type to get started</p>
                   </td>
                 </tr>
               ) : (
@@ -137,17 +141,28 @@ const OrgUnitTypes = () => {
                   <tr key={type.id} className="hover:bg-blue-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center mr-3">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
+                        <div className={`w-10 h-10 ${type.is_employee ? 'bg-gradient-to-br from-green-500 to-green-600' : 'bg-gradient-to-br from-purple-500 to-purple-600'} rounded-lg flex items-center justify-center mr-3`}>
+                          {type.is_employee ? (
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          )}
                         </div>
                         <span className="text-sm font-medium text-gray-900">{type.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${type.is_employee ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                        {type.is_employee ? 'Employee' : 'Organization'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {type.org_units_count || 0} units
+                        {type.okrs?.length || 0} OKRs
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -185,7 +200,7 @@ const OrgUnitTypes = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
-                {editingType ? 'Edit Org Unit Type' : 'Add Org Unit Type'}
+                {editingType ? 'Edit OKR Type' : 'Add OKR Type'}
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -195,10 +210,48 @@ const OrgUnitTypes = () => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Department"
+                  placeholder="e.g., Individual, Team, Department"
                   required
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-200 outline-none"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Owner Type</label>
+                <div className="flex gap-4">
+                  <label className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${!formData.is_employee ? 'border-primary bg-blue-50' : 'border-gray-200'}`}>
+                    <input
+                      type="radio"
+                      name="is_employee"
+                      value={false}
+                      checked={!formData.is_employee}
+                      onChange={() => setFormData({ ...formData, is_employee: false })}
+                      className="sr-only"
+                    />
+                    <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Organization</span>
+                  </label>
+                  <label className={`flex items-center px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${formData.is_employee ? 'border-primary bg-green-50' : 'border-gray-200'}`}>
+                    <input
+                      type="radio"
+                      name="is_employee"
+                      value={true}
+                      checked={formData.is_employee}
+                      onChange={() => setFormData({ ...formData, is_employee: true })}
+                      className="sr-only"
+                    />
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Employee</span>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {formData.is_employee
+                    ? 'This type is for individual employee OKRs'
+                    : 'This type is for organization unit OKRs (Team, Department, Company)'}
+                </p>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <button
@@ -223,4 +276,4 @@ const OrgUnitTypes = () => {
   )
 }
 
-export default OrgUnitTypes
+export default OkrTypes

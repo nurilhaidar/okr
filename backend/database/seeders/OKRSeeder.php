@@ -17,6 +17,7 @@ class OKRSeeder extends Seeder
             [
                 'name' => 'Q1 2026 Engineering Goals',
                 'weight' => 1.0000,
+                'okr_type_id' => 1, // Individual
                 'start_date' => '2026-01-01 00:00:00',
                 'end_date' => '2026-03-31 23:59:59',
                 'owner_type' => 'App\\Models\\Employee',
@@ -26,6 +27,7 @@ class OKRSeeder extends Seeder
             [
                 'name' => 'Q1 2026 Team Objectives',
                 'weight' => 0.8000,
+                'okr_type_id' => 2, // Team
                 'start_date' => '2026-01-01 00:00:00',
                 'end_date' => '2026-03-31 23:59:59',
                 'owner_type' => 'App\\Models\\OrgUnit',
@@ -35,6 +37,7 @@ class OKRSeeder extends Seeder
             [
                 'name' => 'Q1 2026 Department OKRs',
                 'weight' => 1.0000,
+                'okr_type_id' => 3, // Department
                 'start_date' => '2026-01-01 00:00:00',
                 'end_date' => '2026-03-31 23:59:59',
                 'owner_type' => 'App\\Models\\OrgUnit',

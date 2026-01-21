@@ -77,6 +77,7 @@ class AuthController extends Controller
                     'role' => $employee->role?->name,
                     'position' => $employee->position,
                 ],
+                'employee' => $employee,
             ],
         ]);
     }

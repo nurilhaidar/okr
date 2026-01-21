@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout, getMe } from '../services/api'
+import { logout, getMe, getPendingApprovals, approveCheckIn, rejectCheckIn, deleteCheckIn } from '../services/api'
 
 const Dashboard = () => {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [pendingApprovals, setPendingApprovals] = useState([])
+  const [loadingApprovals, setLoadingApprovals] = useState(true)
+  const [currentUser, setCurrentUser] = useState(null)
 
   useEffect(() => {
     const loadUser = async () => {
@@ -18,6 +21,7 @@ const Dashboard = () => {
         const response = await getMe()
         if (response.success) {
           setUser(response.data.user)
+          setCurrentUser(response.data.employee)
           localStorage.setItem('user', JSON.stringify(response.data.user))
         }
       } catch (err) {
@@ -29,6 +33,68 @@ const Dashboard = () => {
 
     loadUser()
   }, [])
+
+  useEffect(() => {
+    const fetchPendingApprovals = async () => {
+      try {
+        setLoadingApprovals(true)
+        const response = await getPendingApprovals()
+        setPendingApprovals(response.data || [])
+      } catch (err) {
+        console.error('Failed to fetch pending approvals:', err)
+        setPendingApprovals([])
+      } finally {
+        setLoadingApprovals(false)
+      }
+    }
+
+    if (currentUser) {
+      fetchPendingApprovals()
+    }
+  }, [currentUser])
+
+  const handleApprove = async (checkInId) => {
+    try {
+      await approveCheckIn(checkInId)
+      // Refresh pending approvals
+      const response = await getPendingApprovals()
+      setPendingApprovals(response.data || [])
+    } catch (err) {
+      console.error('Failed to approve check-in:', err)
+      alert(err.response?.data?.message || 'Failed to approve check-in')
+    }
+  }
+
+  const handleReject = async (checkInId) => {
+    try {
+      await rejectCheckIn(checkInId)
+      // Refresh pending approvals
+      const response = await getPendingApprovals()
+      setPendingApprovals(response.data || [])
+    } catch (err) {
+      console.error('Failed to reject check-in:', err)
+      alert(err.response?.data?.message || 'Failed to reject check-in')
+    }
+  }
+
+  const handleDelete = async (checkInId) => {
+    if (window.confirm('Are you sure you want to delete this check-in?')) {
+      try {
+        await deleteCheckIn(checkInId)
+        // Refresh pending approvals
+        const response = await getPendingApprovals()
+        setPendingApprovals(response.data || [])
+      } catch (err) {
+        console.error('Failed to delete check-in:', err)
+        alert(err.response?.data?.message || 'Failed to delete check-in')
+      }
+    }
+  }
+
+  const canDeleteCheckIn = () => {
+    // Allow delete if user is admin
+    return user?.role === 'admin' || currentUser?.role === 'admin'
+  }
 
   const handleLogout = async () => {
     try {
@@ -52,43 +118,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">OKR System</h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700">{user?.name}</span>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-accent to-accent-dark text-white text-sm font-medium rounded-lg hover:from-accent-dark hover:to-accent focus:outline-none focus:ring-4 focus:ring-accent/50 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
@@ -140,6 +169,98 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Pending Approvals Section */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border-2 border-gray-100 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Pending Check-In Approvals</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+              {pendingApprovals.length} Pending
+            </span>
+          </div>
+          {loadingApprovals ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            </div>
+          ) : pendingApprovals.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm">No pending approvals</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingApprovals.map((checkIn) => (
+                <div key={checkIn.id} className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-gray-900">Value: {checkIn.current_value}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(checkIn.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <p><span className="font-medium">Objective:</span> {checkIn.objective?.description || 'N/A'}</p>
+                        <p><span className="font-medium">Tracker:</span> {checkIn.objective?.tracker_employee?.name || 'N/A'}</p>
+                        {checkIn.comments && (
+                          <p className="mt-2 text-gray-500 italic">"{checkIn.comments}"</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => handleApprove(checkIn.id)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(checkIn.id)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Reject
+                      </button>
+                      {canDeleteCheckIn() && (
+                        <button
+                          onClick={() => handleDelete(checkIn.id)}
+                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {checkIn.evidence_path && (
+                    <div className="mt-3">
+                      <a
+                        href={checkIn.evidence_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        View Evidence
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* User Details Card */}

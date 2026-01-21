@@ -54,4 +54,9 @@ class OrgUnit extends \Illuminate\Database\Eloquent\Model
     {
         return $this->hasMany(OrgUnit::class, 'parent_id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

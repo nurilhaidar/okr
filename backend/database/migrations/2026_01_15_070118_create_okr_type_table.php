@@ -11,15 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('okr', function (Blueprint $table) {
+        Schema::create('okr_type', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->decimal('weight', 5, 4);
-            $table->foreignId('okr_type_id')->constrained('okr_type')->cascadeOnDelete();
-            $table->dateTime('start_date');
-            $table->dateTime('end_date');
-            $table->morphs('owner');
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_employee')->default(true);
             $table->timestamps();
         });
     }
@@ -29,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('okr');
+        Schema::dropIfExists('okr_type');
     }
 };

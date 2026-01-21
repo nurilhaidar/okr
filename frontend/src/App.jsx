@@ -7,6 +7,8 @@ import Roles from './pages/Roles'
 import OrgUnitTypes from './pages/OrgUnitTypes'
 import OrgUnitRoles from './pages/OrgUnitRoles'
 import OrgUnits from './pages/OrgUnits'
+import Okrs from './pages/Okrs'
+import OkrTypes from './pages/OkrTypes'
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
           <Route path="orgunit-types" element={<OrgUnitTypes />} />
           <Route path="orgunit-roles" element={<OrgUnitRoles />} />
           <Route path="orgunits" element={<OrgUnits />} />
+          <Route path="okrs" element={<Okrs />} />
+          <Route path="okr-types" element={<OkrTypes />} />
         </Route>
       </Routes>
     </BrowserRouter>
