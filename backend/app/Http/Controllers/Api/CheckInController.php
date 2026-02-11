@@ -51,12 +51,30 @@ class CheckInController extends Controller
             ], 422);
         }
 
-        $objective = Objective::find($request->objective_id);
+        $objective = Objective::with('okr')->find($request->objective_id);
         if (!$objective) {
             return response()->json([
                 'success' => false,
                 'message' => 'Objective not found',
             ], 404);
+        }
+
+        // Check if the OKR is active
+        if (!$objective->okr || !$objective->okr->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot create check-in for an inactive OKR.',
+            ], 400);
+        }
+
+        // Validate that the OKR's objectives total weight equals 100%
+        $okr = $objective->okr()->with('objectives')->first();
+        if ($okr && !$okr->hasValidObjectiveWeights()) {
+            $totalWeight = $okr->getTotalObjectiveWeight() * 100;
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot create check-in. The total objective weight for this OKR is {$totalWeight}%. It must be exactly 100%.",
+            ], 400);
         }
 
         // Handle file upload
@@ -185,13 +203,21 @@ class CheckInController extends Controller
 
     public function approve($id)
     {
-        $checkIn = CheckIn::with(['objective'])->find($id);
+        $checkIn = CheckIn::with(['objective', 'objective.okr'])->find($id);
 
         if (!$checkIn) {
             return response()->json([
                 'success' => false,
                 'message' => 'Check-in not found',
             ], 404);
+        }
+
+        // Check if the OKR is active
+        if (!$checkIn->objective->okr || !$checkIn->objective->okr->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot approve check-in for an inactive OKR.',
+            ], 400);
         }
 
         // Check if already approved or rejected
@@ -243,13 +269,21 @@ class CheckInController extends Controller
 
     public function reject($id)
     {
-        $checkIn = CheckIn::with(['objective'])->find($id);
+        $checkIn = CheckIn::with(['objective', 'objective.okr'])->find($id);
 
         if (!$checkIn) {
             return response()->json([
                 'success' => false,
                 'message' => 'Check-in not found',
             ], 404);
+        }
+
+        // Check if the OKR is active
+        if (!$checkIn->objective->okr || !$checkIn->objective->okr->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot reject check-in for an inactive OKR.',
+            ], 400);
         }
 
         // Check if already approved or rejected

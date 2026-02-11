@@ -30,7 +30,12 @@ const Login = () => {
       if (response.success) {
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
-        navigate('/dashboard')
+        // Redirect based on user role
+        if (response.data.user.role?.toLowerCase() === 'admin') {
+          navigate('/admin')
+        } else {
+          navigate('/dashboard')
+        }
       } else {
         setError(response.message || 'Login failed')
       }

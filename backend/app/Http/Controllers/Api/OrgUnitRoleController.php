@@ -10,73 +10,54 @@ use Illuminate\Http\JsonResponse;
 class OrgUnitRoleController extends Controller
 {
     /**
-     * Display a listing of the org unit roles.
+     * Display a listing of the org unit roles with pagination.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $orgUnitRoles = OrgUnitRole::with('orgUnitEmployees.employee', 'orgUnitEmployees.orgUnit')->get();
-        return response()->json([
-            'success' => true,
-            'data' => $orgUnitRoles
-        ]);
-    }
-
-    /**
-     * Get org unit roles for datatables.
-     */
-    public function datatables(Request $request): JsonResponse
-    {
-        $query = OrgUnitRole::query();
+        $query = OrgUnitRole::with('orgUnitEmployees.employee', 'orgUnitEmployees.orgUnit');
 
         // Search functionality
-        if ($request->has('search') && $request->search['value'] != '') {
-            $searchValue = $request->search['value'];
+        if ($request->has('search') && $request->search != '') {
+            $searchValue = $request->search;
             $query->where('name', 'like', '%' . $searchValue . '%');
         }
 
-        // Order column mapping
-        $orderColumn = $request->input('order.0.column');
-        $orderDirection = $request->input('order.0.dir', 'asc');
-
-        $columnMapping = [
-            0 => 'id',
-            1 => 'name',
-            2 => 'created_at',
-        ];
-
-        if (isset($columnMapping[$orderColumn])) {
-            $query->orderBy($columnMapping[$orderColumn], $orderDirection);
-        } else {
-            $query->orderBy('created_at', 'desc');
+        // Filter by is_exclusive
+        if ($request->has('is_exclusive') && $request->is_exclusive != '') {
+            $query->where('is_exclusive', $request->is_exclusive);
         }
 
+        // Order by
+        $orderBy = $request->input('order_by', 'name');
+        $orderDirection = $request->input('order_direction', 'asc');
+        $query->orderBy($orderBy, $orderDirection);
+
         // Pagination
-        $start = $request->input('start', 0);
-        $length = $request->input('length', 10);
+        $limit = $request->input('limit', 10);
+        $page = $request->input('page', 1);
 
         $totalRecords = $query->count();
-        $orgUnitRoles = $query->offset($start)->limit($length)->get();
+        $orgUnitRoles = $query->offset(($page - 1) * $limit)->limit($limit)->get();
 
         // Get count of employees for each role
         $orgUnitRoles->loadCount('orgUnitEmployees');
 
-        // Format data for datatables
-        $data = $orgUnitRoles->map(function ($orgUnitRole) {
-            return [
-                'id' => $orgUnitRole->id,
-                'name' => $orgUnitRole->name,
-                'employees_count' => $orgUnitRole->org_unit_employees_count ?? 0,
-                'created_at' => $orgUnitRole->created_at?->format('Y-m-d H:i:s'),
-                'updated_at' => $orgUnitRole->updated_at?->format('Y-m-d H:i:s'),
-            ];
+        // Add employees_count to each role
+        $orgUnitRoles->each(function ($role) {
+            $role->employees_count = $role->org_unit_employees_count ?? 0;
         });
 
         return response()->json([
             'success' => true,
-            'data' => $data,
-            'draw' => intval($request->input('draw')),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $totalRecords,
+            'data' => $orgUnitRoles,
+            'pagination' => [
+                'total' => $totalRecords,
+                'per_page' => (int) $limit,
+                'current_page' => (int) $page,
+                'last_page' => (int) ceil($totalRecords / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $totalRecords),
+            ]
         ]);
     }
 

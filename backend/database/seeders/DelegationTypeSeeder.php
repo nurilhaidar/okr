@@ -14,10 +14,10 @@ class DelegationTypeSeeder extends Seeder
     public function run(): void
     {
         $delegationTypes = [
-            ['name' => 'Direct'],
-            ['name' => 'Cascaded'],
-            ['name' => 'Shared'],
-            ['name' => 'Contributed'],
+            ['name' => 'Full Delegate'],
+            ['name' => 'Full Delegate (Multiple Team)'],
+            ['name' => 'Partial Delegate (Without Weight)'],
+            ['name' => 'Partial Delegate (With Weight)'],
         ];
 
         foreach ($delegationTypes as $delegationType) {

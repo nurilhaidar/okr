@@ -106,7 +106,13 @@ class ObjectiveController extends Controller
 
     public function show($id)
     {
-        $objective = Objective::with(['okr', 'trackerEmployee', 'approverEmployee', 'checkIns', 'approvalLogs'])->find($id);
+        $objective = Objective::with([
+            'okr',
+            'trackerEmployee',
+            'approverEmployee',
+            'checkIns',
+            'approvalLogs'
+        ])->find($id);
 
         if (!$objective) {
             return response()->json([
@@ -207,7 +213,10 @@ class ObjectiveController extends Controller
             ], 404);
         }
 
-        $objectives = Objective::with(['trackerEmployee', 'approverEmployee'])
+        $objectives = Objective::with([
+            'trackerEmployee',
+            'approverEmployee'
+        ])
             ->where('okr_id', $okrId)
             ->orderBy('deadline', 'asc')
             ->get();

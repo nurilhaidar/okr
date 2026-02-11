@@ -10,73 +10,49 @@ use Illuminate\Http\JsonResponse;
 class OrgUnitTypeController extends Controller
 {
     /**
-     * Display a listing of the org unit types.
+     * Display a listing of the org unit types with pagination.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $orgUnitTypes = OrgUnitType::with('orgUnits')->get();
-        return response()->json([
-            'success' => true,
-            'data' => $orgUnitTypes
-        ]);
-    }
-
-    /**
-     * Get org unit types for datatables.
-     */
-    public function datatables(Request $request): JsonResponse
-    {
-        $query = OrgUnitType::query();
+        $query = OrgUnitType::with('orgUnits');
 
         // Search functionality
-        if ($request->has('search') && $request->search['value'] != '') {
-            $searchValue = $request->search['value'];
+        if ($request->has('search') && $request->search != '') {
+            $searchValue = $request->search;
             $query->where('name', 'like', '%' . $searchValue . '%');
         }
 
-        // Order column mapping
-        $orderColumn = $request->input('order.0.column');
-        $orderDirection = $request->input('order.0.dir', 'asc');
-
-        $columnMapping = [
-            0 => 'id',
-            1 => 'name',
-            2 => 'created_at',
-        ];
-
-        if (isset($columnMapping[$orderColumn])) {
-            $query->orderBy($columnMapping[$orderColumn], $orderDirection);
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
+        // Order by
+        $orderBy = $request->input('order_by', 'name');
+        $orderDirection = $request->input('order_direction', 'asc');
+        $query->orderBy($orderBy, $orderDirection);
 
         // Pagination
-        $start = $request->input('start', 0);
-        $length = $request->input('length', 10);
+        $limit = $request->input('limit', 10);
+        $page = $request->input('page', 1);
 
         $totalRecords = $query->count();
-        $orgUnitTypes = $query->offset($start)->limit($length)->get();
+        $orgUnitTypes = $query->offset(($page - 1) * $limit)->limit($limit)->get();
 
         // Get count of org units for each type
         $orgUnitTypes->loadCount('orgUnits');
 
-        // Format data for datatables
-        $data = $orgUnitTypes->map(function ($orgUnitType) {
-            return [
-                'id' => $orgUnitType->id,
-                'name' => $orgUnitType->name,
-                'org_units_count' => $orgUnitType->org_units_count ?? 0,
-                'created_at' => $orgUnitType->created_at?->format('Y-m-d H:i:s'),
-                'updated_at' => $orgUnitType->updated_at?->format('Y-m-d H:i:s'),
-            ];
+        // Add org_units_count to each type
+        $orgUnitTypes->each(function ($type) {
+            $type->org_units_count = $type->org_units_count ?? 0;
         });
 
         return response()->json([
             'success' => true,
-            'data' => $data,
-            'draw' => intval($request->input('draw')),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $totalRecords,
+            'data' => $orgUnitTypes,
+            'pagination' => [
+                'total' => $totalRecords,
+                'per_page' => (int) $limit,
+                'current_page' => (int) $page,
+                'last_page' => (int) ceil($totalRecords / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $totalRecords),
+            ]
         ]);
     }
 

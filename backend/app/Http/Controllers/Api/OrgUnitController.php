@@ -472,6 +472,7 @@ class OrgUnitController extends Controller
 
     /**
      * Get all members of an org unit with their roles.
+     * Sorted by role priority (exclusive roles first).
      */
     public function getMembers($id): JsonResponse
     {
@@ -498,7 +499,12 @@ class OrgUnitController extends Controller
                     'role_name' => $member->orgUnitRole->name,
                     'is_exclusive' => (bool) $member->orgUnitRole->is_exclusive,
                 ];
-            });
+            })
+            ->sortBy(function ($member) {
+                // Sort by is_exclusive (descending) then by role_name (ascending)
+                return [!(int) $member['is_exclusive'], $member['role_name']];
+            })
+            ->values();
 
         return response()->json([
             'success' => true,

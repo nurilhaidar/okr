@@ -50,8 +50,25 @@ class Employee extends Authenticatable
             ->withTimestamps();
     }
 
+    public function trackedObjectives()
+    {
+        return $this->hasMany(Objective::class, 'tracker');
+    }
+
+    public function approverObjectives()
+    {
+        return $this->hasMany(Objective::class, 'approver');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeOrderByRole($query, $direction = 'asc')
+    {
+        return $query->leftJoin('role', 'employee.role_id', '=', 'role.id')
+            ->orderBy('role.name', $direction)
+            ->select('employee.*');
     }
 }

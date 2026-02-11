@@ -65,7 +65,5 @@ class CheckInSeeder extends Seeder
                 'updated_at' => now(),
             ]));
         }
-
-        $this->command->info('Check-ins created successfully. All check-ins will be set to PENDING status.');
     }
 }

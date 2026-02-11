@@ -54,8 +54,8 @@ export const getMe = async () => {
 }
 
 // Employee APIs
-export const getEmployees = async () => {
-  const response = await api.get('/employees')
+export const getEmployees = async (params = {}) => {
+  const response = await api.get('/employees', { params })
   return response.data
 }
 
@@ -90,8 +90,8 @@ export const deleteEmployee = async (id) => {
 }
 
 // Role APIs
-export const getRoles = async () => {
-  const response = await api.get('/roles')
+export const getRoles = async (params = {}) => {
+  const response = await api.get('/roles', { params })
   return response.data
 }
 
@@ -177,8 +177,8 @@ export const getOrgUnitsDatatables = async (params) => {
 }
 
 // OrgUnitType APIs
-export const getOrgUnitTypes = async () => {
-  const response = await api.get('/orgunit-types')
+export const getOrgUnitTypes = async (params = {}) => {
+  const response = await api.get('/orgunit-types', { params })
   return response.data
 }
 
@@ -208,8 +208,8 @@ export const getOrgUnitTypesDatatables = async (params) => {
 }
 
 // OrgUnitRole APIs
-export const getOrgUnitRoles = async () => {
-  const response = await api.get('/orgunit-roles')
+export const getOrgUnitRoles = async (params = {}) => {
+  const response = await api.get('/orgunit-roles', { params })
   return response.data
 }
 
@@ -279,9 +279,14 @@ export const getAvailableOwners = async () => {
   return response.data
 }
 
+export const getOkrsByEmployee = async (employeeId) => {
+  const response = await api.get(`/okrs/by-employee/${employeeId}`)
+  return response.data
+}
+
 // OKR Type APIs
-export const getOkrTypes = async () => {
-  const response = await api.get('/okr-types')
+export const getOkrTypes = async (params = {}) => {
+  const response = await api.get('/okr-types', { params })
   return response.data
 }
 

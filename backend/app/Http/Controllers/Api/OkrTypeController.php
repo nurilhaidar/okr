@@ -5,21 +5,56 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\OkrType;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
 class OkrTypeController extends Controller
 {
-    public function index()
+    /**
+     * Display a listing of OKR types with pagination.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $okrTypes = OkrType::all();
+        $query = OkrType::query();
+
+        // Search functionality
+        if ($request->has('search') && $request->search != '') {
+            $searchValue = $request->search;
+            $query->where('name', 'like', '%' . $searchValue . '%');
+        }
+
+        // Filter by is_employee
+        if ($request->has('is_employee') && $request->is_employee != '') {
+            $query->where('is_employee', $request->is_employee);
+        }
+
+        // Order by
+        $orderBy = $request->input('order_by', 'name');
+        $orderDirection = $request->input('order_direction', 'asc');
+        $query->orderBy($orderBy, $orderDirection);
+
+        // Pagination
+        $limit = $request->input('limit', 10);
+        $page = $request->input('page', 1);
+
+        $totalRecords = $query->count();
+        $okrTypes = $query->offset(($page - 1) * $limit)->limit($limit)->get();
 
         return response()->json([
             'success' => true,
             'data' => $okrTypes,
+            'pagination' => [
+                'total' => $totalRecords,
+                'per_page' => (int) $limit,
+                'current_page' => (int) $page,
+                'last_page' => (int) ceil($totalRecords / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $totalRecords),
+            ]
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -43,7 +78,7 @@ class OkrTypeController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show($id): JsonResponse
     {
         $okrType = OkrType::with('okrs')->find($id);
 
@@ -60,7 +95,7 @@ class OkrTypeController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $okrType = OkrType::find($id);
 
@@ -93,7 +128,7 @@ class OkrTypeController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
         $okrType = OkrType::find($id);
 

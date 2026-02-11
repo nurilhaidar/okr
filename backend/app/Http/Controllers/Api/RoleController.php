@@ -5,19 +5,50 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
-    public function index()
+    /**
+     * Display a listing of roles with pagination.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $roles = Role::with('employees')->get();
+        $query = Role::with('employees');
+
+        // Search functionality
+        if ($request->has('search') && $request->search != '') {
+            $searchValue = $request->search;
+            $query->where('name', 'like', '%' . $searchValue . '%');
+        }
+
+        // Order by
+        $orderBy = $request->input('order_by', 'name');
+        $orderDirection = $request->input('order_direction', 'asc');
+        $query->orderBy($orderBy, $orderDirection);
+
+        // Pagination
+        $limit = $request->input('limit', 10);
+        $page = $request->input('page', 1);
+
+        $totalRecords = $query->count();
+        $roles = $query->offset(($page - 1) * $limit)->limit($limit)->get();
+
         return response()->json([
             'success' => true,
-            'data' => $roles
+            'data' => $roles,
+            'pagination' => [
+                'total' => $totalRecords,
+                'per_page' => (int) $limit,
+                'current_page' => (int) $page,
+                'last_page' => (int) ceil($totalRecords / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $totalRecords),
+            ]
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
             'name' => 'required|string|max:100|unique:role',
@@ -34,7 +65,7 @@ class RoleController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show($id): JsonResponse
     {
         $role = Role::with('employees')->find($id);
 
@@ -51,7 +82,7 @@ class RoleController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $role = Role::find($id);
 
@@ -75,7 +106,7 @@ class RoleController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
         $role = Role::find($id);
 

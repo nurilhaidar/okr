@@ -7,6 +7,7 @@ use App\Models\Okr;
 use App\Models\OkrType;
 use App\Models\Employee;
 use App\Models\OrgUnit;
+use App\Models\OrgUnitMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -327,6 +328,57 @@ class OkrController extends Controller
                 'employees' => $employees,
                 'org_units' => $orgUnits,
             ],
+        ]);
+    }
+
+    public function getByEmployee($employeeId)
+    {
+        $employee = Employee::find($employeeId);
+
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee not found',
+            ], 404);
+        }
+
+        // Get all org units where this employee is a member
+        $orgUnitIds = OrgUnitMember::where('employee_id', $employeeId)
+            ->where('is_active', true)
+            ->pluck('org_unit_id')
+            ->toArray();
+
+        // Get OKRs where:
+        // 1. The employee is the owner (owner_type = Employee and owner_id = employeeId)
+        // 2. OR the org unit (where employee is a member) is the owner
+        $query = Okr::with(['owner', 'okrType', 'objectives' => function ($query) {
+            $query->with(['trackerEmployee', 'approverEmployee']);
+        }]);
+
+        $query->where(function ($q) use ($employeeId, $orgUnitIds) {
+            // Employee is the owner
+            $q->where('owner_type', Employee::class)
+              ->where('owner_id', $employeeId);
+
+            // Or org unit (where employee is a member) is the owner
+            if (!empty($orgUnitIds)) {
+                $q->orWhere(function ($subQ) use ($orgUnitIds) {
+                    $subQ->where('owner_type', OrgUnit::class)
+                          ->whereIn('owner_id', $orgUnitIds);
+                });
+            }
+        });
+
+        $okrs = $query->orderBy('created_at', 'desc')->get();
+
+        // Append progress to each OKR
+        $okrs->each(function ($okr) {
+            $okr->progress = $okr->progress;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $okrs,
         ]);
     }
 }

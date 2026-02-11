@@ -100,4 +100,21 @@ class Okr extends Model
 
         return $weightedProgress / $totalWeight;
     }
+
+    /**
+     * Check if the total weight of all objectives equals 100% (1.0)
+     */
+    public function hasValidObjectiveWeights(): bool
+    {
+        $totalWeight = (float) $this->objectives->sum('weight');
+        return abs($totalWeight - 1.0) < 0.0001; // Allow small floating point difference
+    }
+
+    /**
+     * Get the total weight of all objectives
+     */
+    public function getTotalObjectiveWeight(): float
+    {
+        return (float) $this->objectives->sum('weight');
+    }
 }

@@ -98,11 +98,5 @@ class ApprovalLogSeeder extends Seeder
         foreach ($approvalLogs as $approvalLog) {
             DB::table('approval_log')->insert($approvalLog);
         }
-
-        $this->command->info('Approval logs created successfully.');
-        $this->command->info('Summary:');
-        $this->command->info('  - Check-ins 1, 3, 5: APPROVED (pending → approved)');
-        $this->command->info('  - Check-ins 2, 6: PENDING (waiting for approval)');
-        $this->command->info('  - Check-in 4: REJECTED (pending → rejected, needs new check-in)');
     }
 }

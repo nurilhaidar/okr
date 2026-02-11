@@ -1,0 +1,229 @@
+@extends('layouts.app')
+
+@section('title', 'Roles - OKR Management System')
+
+@section('content')
+    <div class="row">
+        <div class="col-12 col-lg-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Roles</h4>
+                            <p class="text-muted mb-0">Manage user roles and permissions.</p>
+                        </div>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                            <i class="ti ti-plus me-2"></i>Add Role
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roles Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover dt-responsive" id="rolesTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Employees Count</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($roles as $role)
+                                    <tr data-id="{{ $role->id }}" data-name="{{ $role->name }}"
+                                        data-employees-count="{{ $role->employees()->count() }}">
+                                        <td>{{ $role->id }}</td>
+                                        <td>
+                                            <span class="badge bg-label-primary">{{ $role->name }}</span>
+                                        </td>
+                                        <td>{{ $role->employees()->count() }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($role->created_at)->format('M d, Y') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-icon btn-outline-primary btn-edit" title="Edit">
+                                                <i class="ti ti-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-icon btn-outline-danger btn-delete ms-1" title="Delete">
+                                                <i class="ti ti-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Role Modal -->
+    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ route('admin.roles.store') }}">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                                placeholder="Enter role name" required>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ti ti-check me-2"></i>Save Role
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div class="modal fade" id="editRoleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ route('admin.roles.update', 0) }}" id="editRoleForm">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="editRoleId">
+                        <div class="mb-3">
+                            <label class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editRoleName" class="form-control"
+                                placeholder="Enter role name" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ti ti-check me-2"></i>Update Role
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@section('page_scripts')
+    <!-- Vendors JS -->
+    <script src="{{ asset('plugin/vuexy/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js') }}"></script>
+    <script src="{{ asset('plugin/vuexy/assets/js/tables-datatables-advanced.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize DataTable
+            const rolesTable = $('#rolesTable').DataTable({
+                responsive: true,
+                pageLength: 10,
+                lengthMenu: [
+                    [10, 25, 50, -1],
+                    [10, 25, 50, 'All']
+                ],
+                language: {
+                    search: '_INPUT_',
+                    searchPlaceholder: 'Search roles...',
+                    paginate: {
+                        next: '<i class="ti ti-chevron-right"></i>',
+                        previous: '<i class="ti ti-chevron-left"></i>'
+                    }
+                },
+                columnDefs: [{
+                    orderable: false,
+                    targets: [4]
+                }],
+                order: [
+                    [0, 'desc']
+                ]
+            });
+
+            // Edit button click handler
+            $(document).on('click', '.btn-edit', function() {
+                const row = $(this).closest('tr');
+                const id = row.data('id');
+                const name = row.data('name');
+
+                document.getElementById('editRoleId').value = id;
+                document.getElementById('editRoleName').value = name;
+                document.getElementById('editRoleForm').action = '/admin/roles/' + id;
+
+                const modal = new bootstrap.Modal(document.getElementById('editRoleModal'));
+                modal.show();
+            });
+
+            // Delete button click handler
+            $(document).on('click', '.btn-delete', function() {
+                const row = $(this).closest('tr');
+                const id = row.data('id');
+                const name = row.data('name');
+
+                if (confirm(`Are you sure you want to delete the role "${name}"?`)) {
+                    // Create and submit form dynamically
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/admin/roles/' + id;
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = '{{ csrf_token() }}';
+
+                    const methodInput = document.createElement('input');
+                    methodInput.type = 'hidden';
+                    methodInput.name = '_method';
+                    methodInput.value = 'DELETE';
+
+                    form.appendChild(csrfInput);
+                    form.appendChild(methodInput);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+
+            // Display toastr notifications for CRUD operations
+            @if (session('success'))
+                showToast('Success', '{{ session('success') }}', 'success');
+            @endif
+
+            @if (session('error'))
+                showToast('Error', '{{ session('error') }}', 'error');
+            @endif
+
+            @if ($errors->any())
+                @foreach ($errors->all() as $error)
+                    showToast('Validation Error', '{{ $error }}', 'error');
+                @endforeach
+            @endif
+
+            // Auto-dismiss alerts after 5 seconds
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 150);
+                });
+            }, 5000);
+        });
+    </script>
+@endsection

@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\OrgUnitTypeController;
 use App\Http\Controllers\Api\OrgUnitRoleController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -29,6 +29,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // OrgUnit Routes
     Route::apiResource('orgunits', OrgUnitController::class);
     Route::get('/orgunits/datatables', [OrgUnitController::class, 'datatables']);
+    Route::get('/orgunits/{id}/available-roles', [OrgUnitController::class, 'getAvailableRoles']);
+    Route::get('/orgunits/{id}/members', [OrgUnitController::class, 'getMembers']);
+    Route::post('/orgunits/{id}/members', [OrgUnitController::class, 'addMember']);
+    Route::patch('/orgunits/{id}/members/{memberId}', [OrgUnitController::class, 'updateMemberRole']);
+    Route::delete('/orgunits/{id}/members/{memberId}', [OrgUnitController::class, 'removeMember']);
     Route::patch('/orgunits/{id}/deactivate', [OrgUnitController::class, 'deactivate']);
     Route::patch('/orgunits/{id}/activate', [OrgUnitController::class, 'activate']);
 
@@ -45,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // OKR Routes
     Route::get('/okrs/available-owners', [OkrController::class, 'getAvailableOwners']);
+    Route::get('/okrs/by-employee/{employeeId}', [OkrController::class, 'getByEmployee']);
     Route::apiResource('okrs', OkrController::class);
     Route::patch('/okrs/{id}/activate', [OkrController::class, 'activate']);
     Route::patch('/okrs/{id}/deactivate', [OkrController::class, 'deactivate']);
