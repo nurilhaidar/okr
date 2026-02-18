@@ -16,35 +16,26 @@ class OkrController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Okr::with(['owner', 'okrType', 'objectives']);
-
-        // Filter by owner type if provided
-        if ($request->has('owner_type')) {
-            $query->where('owner_type', $request->owner_type);
-        }
-
-        // Filter by owner_id if provided
-        if ($request->has('owner_id')) {
-            $query->where('owner_id', $request->owner_id);
-        }
+        $query = Okr::with(['employee', 'orgUnit', 'okrType', 'objectives']);
 
         // Filter by OKR type if provided
         if ($request->has('okr_type_id')) {
             $query->where('okr_type_id', $request->okr_type_id);
         }
 
+        // Filter by employee_id if provided
+        if ($request->has('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        // Filter by orgunit_id if provided
+        if ($request->has('orgunit_id')) {
+            $query->where('orgunit_id', $request->orgunit_id);
+        }
+
         // Filter by active status if provided
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Filter for specific employee
-        if ($request->has('employee_id')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('owner_type', Employee::class)
-                  ->where('owner_id', $request->employee_id)
-                  ->orWhere('owner_type', OrgUnit::class);
-            });
         }
 
         $okrs = $query->orderBy('created_at', 'desc')->get();
@@ -72,8 +63,8 @@ class OkrController extends Controller
             'okr_type_id' => 'required|integer|exists:okr_type,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'owner_type' => 'required|in:App\\\Models\\\Employee,App\\\Models\\\OrgUnit',
-            'owner_id' => 'required|integer',
+            'employee_id' => 'required_without:orgunit_id|integer|exists:employee,id',
+            'orgunit_id' => 'required_without:employee_id|integer|exists:orgunit,id',
             'is_active' => 'boolean',
             'objectives' => 'array',
             'objectives.*.description' => 'required|string',
@@ -85,6 +76,30 @@ class OkrController extends Controller
             'objectives.*.tracker' => 'required|integer|exists:employee,id',
             'objectives.*.approver' => 'required|integer|exists:employee,id',
         ]);
+
+        // Custom validation: employee_id or orgunit_id must be set based on okr_type
+        $validator->after(function ($validator) use ($request) {
+            $okrType = OkrType::find($request->okr_type_id);
+            if (!$okrType) {
+                return;
+            }
+
+            if ($okrType->is_employee && empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID is required for this OKR type.');
+            }
+
+            if (!$okrType->is_employee && empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
+            }
+
+            if ($okrType->is_employee && !empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            }
+
+            if (!$okrType->is_employee && !empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json([
@@ -103,23 +118,14 @@ class OkrController extends Controller
             ], 404);
         }
 
-        // Validate owner exists
-        $ownerClass = $request->owner_type;
-        if (!$ownerClass::where('id', $request->owner_id)->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Owner not found',
-            ], 404);
-        }
-
         $okr = Okr::create([
             'name' => $request->name,
             'weight' => $request->weight,
             'okr_type_id' => $request->okr_type_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'owner_type' => $request->owner_type,
-            'owner_id' => $request->owner_id,
+            'employee_id' => $request->employee_id,
+            'orgunit_id' => $request->orgunit_id,
             'is_active' => $request->get('is_active', true),
         ]);
 
@@ -139,7 +145,7 @@ class OkrController extends Controller
             }
         }
 
-        $okr->load(['owner', 'okrType', 'objectives']);
+        $okr->load(['employee', 'orgUnit', 'okrType', 'objectives']);
 
         // Append progress
         $okr->progress = $okr->progress;
@@ -153,7 +159,7 @@ class OkrController extends Controller
 
     public function show($id)
     {
-        $okr = Okr::with(['owner', 'okrType', 'objectives.trackerEmployee', 'objectives.approverEmployee'])->find($id);
+        $okr = Okr::with(['employee', 'orgUnit', 'okrType', 'objectives.trackerEmployee', 'objectives.approverEmployee'])->find($id);
 
         if (!$okr) {
             return response()->json([
@@ -188,11 +194,8 @@ class OkrController extends Controller
             'okr_type_id' => 'integer|exists:okr_type,id',
             'start_date' => 'date',
             'end_date' => 'date|after:start_date',
-            'owner_type' => [
-                'sometimes',
-                Rule::in(['App\Models\Employee', 'App\Models\OrgUnit'])
-            ],
-            'owner_id' => 'integer',
+            'employee_id' => 'sometimes|required_without:orgunit_id|integer|exists:employee,id',
+            'orgunit_id' => 'sometimes|required_without:employee_id|integer|exists:orgunit,id',
             'is_active' => 'boolean',
             'objectives' => 'array',
             'objectives.*.id' => 'integer|exists:objective,id',
@@ -206,6 +209,30 @@ class OkrController extends Controller
             'objectives.*.approver' => 'integer|exists:employee,id',
         ]);
 
+        // Custom validation: employee_id or orgunit_id must be set based on okr_type
+        $validator->after(function ($validator) use ($request, $okr) {
+            $okrType = OkrType::find($request->okr_type_id ?? $okr->okr_type_id);
+            if (!$okrType) {
+                return;
+            }
+
+            if ($okrType->is_employee && empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID is required for this OKR type.');
+            }
+
+            if (!$okrType->is_employee && empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
+            }
+
+            if ($okrType->is_employee && !empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            }
+
+            if (!$okrType->is_employee && !empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
+            }
+        });
+
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -214,12 +241,30 @@ class OkrController extends Controller
             ], 422);
         }
 
-        $okr->update($request->only(['name', 'weight', 'okr_type_id', 'start_date', 'end_date', 'owner_type', 'owner_id', 'is_active']));
+        $updateData = [
+            'name' => $request->name,
+            'weight' => $request->weight,
+            'okr_type_id' => $request->okr_type_id ?? $okr->okr_type_id,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'is_active' => $request->get('is_active', $okr->is_active),
+        ];
+
+        // Only update owner fields if provided
+        if ($request->has('employee_id')) {
+            $updateData['employee_id'] = $request->employee_id;
+            $updateData['orgunit_id'] = null;
+        } elseif ($request->has('orgunit_id')) {
+            $updateData['orgunit_id'] = $request->orgunit_id;
+            $updateData['employee_id'] = null;
+        }
+
+        $okr->update($updateData);
 
         // Update objectives if provided
         if ($request->has('objectives')) {
             foreach ($request->objectives as $objectiveData) {
-                if (isset($objectiveData['id'])) {
+                if (isset($objectiveData['id']) && $objectiveData['id']) {
                     // Update existing objective
                     $objective = \App\Models\Objective::find($objectiveData['id']);
                     if ($objective && $objective->okr_id == $okr->id) {
@@ -238,7 +283,7 @@ class OkrController extends Controller
             }
         }
 
-        $okr->load(['owner', 'okrType', 'objectives']);
+        $okr->load(['employee', 'orgUnit', 'okrType', 'objectives']);
 
         // Append progress
         $okr->progress = $okr->progress;
@@ -349,25 +394,23 @@ class OkrController extends Controller
             ->toArray();
 
         // Get OKRs where:
-        // 1. The employee is the owner (owner_type = Employee and owner_id = employeeId)
-        // 2. OR the org unit (where employee is a member) is the owner
-        $query = Okr::with(['owner', 'okrType', 'objectives' => function ($query) {
+        // 1. The employee is owner (employee_id = employeeId)
+        // 2. OR org unit (where employee is a member) is owner
+        $query = Okr::with(['okrType', 'employee', 'orgUnit', 'objectives' => function ($query) {
             $query->with(['trackerEmployee', 'approverEmployee']);
         }]);
 
         $query->where(function ($q) use ($employeeId, $orgUnitIds) {
-            // Employee is the owner
-            $q->where('owner_type', Employee::class)
-              ->where('owner_id', $employeeId);
-
-            // Or org unit (where employee is a member) is the owner
-            if (!empty($orgUnitIds)) {
-                $q->orWhere(function ($subQ) use ($orgUnitIds) {
-                    $subQ->where('owner_type', OrgUnit::class)
-                          ->whereIn('owner_id', $orgUnitIds);
-                });
-            }
+            // Employee is owner
+            $q->where('employee_id', $employeeId);
         });
+
+        if (!empty($orgUnitIds)) {
+            // Or org unit (where employee is a member) is the owner
+            $query->orWhere(function ($subQ) use ($orgUnitIds) {
+                $subQ->whereIn('orgunit_id', $orgUnitIds);
+            });
+        }
 
         $okrs = $query->orderBy('created_at', 'desc')->get();
 

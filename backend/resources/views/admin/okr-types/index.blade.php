@@ -3,8 +3,21 @@
 @section('title', 'OKR Types - OKR Management System')
 
 @section('content')
-  <div class="row">
-    <div class="col-12 col-lg-12 mb-4">
+  <!-- Breadcrumb -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+          <li class="breadcrumb-item active">OKR Types</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Header Card -->
+  <div class="row mb-4">
+    <div class="col-12">
       <div class="card">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
@@ -13,7 +26,7 @@
               <p class="text-muted mb-0">Manage OKR types for individual employees and organization units.</p>
             </div>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTypeModal">
-              <i class="ti ti-plus me-2"></i>Add Type
+              <i class="ti ti-plus me-1"></i>Add Type
             </button>
           </div>
         </div>
@@ -30,52 +43,55 @@
             <table class="table table-hover">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Name</th>
-                  <th>Owner Type</th>
-                  <th>Used In OKRs</th>
-                  <th>Created At</th>
+                  <th>Type</th>
+                  <th>OKR Types Used</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 @foreach($okrTypes as $type)
                   <tr>
-                    <td>{{ $type->id }}</td>
-                    <td>
-                      <span class="badge bg-label-primary">{{ $type->name }}</span>
-                    </td>
+                    <td>{{ $type->name }}</td>
                     <td>
                       @if($type->is_employee)
-                        <span class="badge bg-label-success">
+                        <span class="badge bg-label-primary">
                           <i class="ti ti-user me-1"></i>Employee
                         </span>
                       @else
-                        <span class="badge bg-label-info">
-                          <i class="ti ti-building me-1"></i>Organization
+                        <span class="badge bg-label-success">
+                          <i class="ti ti-building me-1"></i>OrgUnit
                         </span>
                       @endif
                     </td>
-                    <td>{{ $type->okrs_count }}</td>
-                    <td>{{ \Carbon\Carbon::parse($type->created_at)->format('M d, Y') }}</td>
+                    <td>
+                      @if($type->okrs_count > 0)
+                        <span class="badge bg-label-warning">{{ $type->okrs_count }}</span>
+                      @else
+                        <span class="text-muted">0</span>
+                      @endif
+                    </td>
                     <td>
                       <div class="d-flex gap-1">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editType({{ $type->id }}, '{{ $type->name }}', {{ $type->is_employee ? 'true' : 'false' }})">
+                        <button class="btn btn-sm btn-icon btn-outline-primary" onclick="editType({{ $type->id }}, '{{ $type->name }}', {{ $type->is_employee ? 'true' : 'false' }}, {{ $type->is_active ? 'true' : 'false' }})">
                           <i class="ti ti-pencil"></i>
                         </button>
-                        @if($type->okrs_count == 0)
-                          <form method="POST" action="{{ route('admin.okr-types.destroy', $type->id) }}" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this OKR type?')">
-                              <i class="ti ti-trash"></i>
-                            </button>
-                          </form>
+                        @if($type->is_active)
+                          <button class="btn btn-sm btn-icon btn-outline-warning" onclick="deactivateType({{ $type->id }})" title="Deactivate">
+                            <i class="ti ti-player-pause"></i>
+                          </button>
                         @else
-                          <button type="button" class="btn btn-sm btn-outline-danger" disabled title="Cannot delete type with associated OKRs">
-                            <i class="ti ti-trash"></i>
+                          <button class="btn btn-sm btn-icon btn-outline-success" onclick="activateType({{ $type->id }})" title="Activate">
+                            <i class="ti ti-player-play"></i>
                           </button>
                         @endif
+                        <form method="POST" action="{{ route('admin.okr-types.destroy', $type->id) }}" class="d-inline">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-icon btn-outline-danger" onclick="return confirm('Are you sure you want to delete this type?')">
+                            <i class="ti ti-trash"></i>
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>
@@ -101,30 +117,24 @@
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label">Type Name <span class="text-danger">*</span></label>
-              <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="e.g., Individual, Team, Department" required>
+              <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="e.g., Individual, Team" required>
               @error('name')
                 <div class="invalid-feedback">{{ $message }}</div>
               @enderror
             </div>
-            <div class="mb-3">
-              <label class="form-label">Owner Type <span class="text-danger">*</span></label>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="is_employee" id="isEmployee" value="1" checked>
-                <label class="form-check-label" for="isEmployee">
-                  <strong>Employee</strong>
-                  <small class="text-muted d-block">For individual employee OKRs</small>
+            <div class="mb-3 form-check">
+              <input type="checkbox" name="is_employee" class="form-check-input" id="addIsEmployee">
+              <label class="form-check-label" for="addIsEmployee">
+                <i class="ti ti-user me-1"></i>For Employee
+              </label>
+              <small class="text-muted d-block">Check if this type is for individual employees (unchecked = for organization units)</small>
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" name="is_active" id="addIsActive" checked>
+                <label class="form-check-label" for="addIsActive">
+                  <i class="ti ti-activity me-1"></i>Active
                 </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="is_employee" id="isOrgUnit" value="0">
-                <label class="form-check-label" for="isOrgUnit">
-                  <strong>Organization Unit</strong>
-                  <small class="text-muted d-block">For team/department/company OKRs</small>
-                </label>
-              </div>
-              @error('is_employee')
-                <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+                <small class="text-muted d-block">Enable this type for use in the system</small>
             </div>
           </div>
           <div class="modal-footer">
@@ -153,24 +163,21 @@
             <input type="hidden" name="id" id="editTypeId">
             <div class="mb-3">
               <label class="form-label">Type Name <span class="text-danger">*</span></label>
-              <input type="text" name="name" id="editTypeName" class="form-control" placeholder="e.g., Individual, Team, Department" required>
+              <input type="text" name="name" id="editTypeName" class="form-control" placeholder="e.g., Individual, Team" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Owner Type <span class="text-danger">*</span></label>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="is_employee" id="editIsEmployee" value="1">
-                <label class="form-check-label" for="editIsEmployee">
-                  <strong>Employee</strong>
-                  <small class="text-muted d-block">For individual employee OKRs</small>
+            <div class="mb-3 form-check">
+              <input type="checkbox" name="is_employee" class="form-check-input" id="editIsEmployee">
+              <label class="form-check-label" for="editIsEmployee">
+                <i class="ti ti-user me-1"></i>For Employee
+              </label>
+              <small class="text-muted d-block">Check if this type is for individual employees (unchecked = for organization units)</small>
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" name="is_active" id="editIsActive" checked>
+                <label class="form-check-label" for="editIsActive">
+                  <i class="ti ti-activity me-1"></i>Active
                 </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="is_employee" id="editIsOrgUnit" value="0">
-                <label class="form-check-label" for="editIsOrgUnit">
-                  <strong>Organization Unit</strong>
-                  <small class="text-muted d-block">For team/department/company OKRs</small>
-                </label>
-              </div>
+                <small class="text-muted d-block">Enable this type for use in the system</small>
             </div>
           </div>
           <div class="modal-footer">
@@ -183,19 +190,64 @@
       </div>
     </div>
   </div>
+
 @endsection
 
 @section('page_scripts')
   <script>
-    function editType(id, name, isEmployee) {
+    function editType(id, name, isEmployee, isActive) {
       document.getElementById('editTypeId').value = id;
       document.getElementById('editTypeName').value = name;
       document.getElementById('editIsEmployee').checked = isEmployee;
-      document.getElementById('editIsOrgUnit').checked = !isEmployee;
+      document.getElementById('editIsActive').checked = isActive;
       document.getElementById('editTypeForm').action = '/admin/okr-types/' + id;
 
       const modal = new bootstrap.Modal(document.getElementById('editTypeModal'));
       modal.show();
+    }
+
+    function deactivateType(id) {
+      if (!confirm('Are you sure you want to deactivate this type?')) return;
+
+      fetch(`/admin/okr-types/${id}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': '{{ csrf_token() }}',
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          showToast('Success', 'Type deactivated successfully', 'success');
+          location.reload();
+        } else {
+          return response.json().then(data => {
+            showToast('Error', data.message || 'Failed to deactivate type', 'error');
+          });
+        }
+      });
+    }
+
+    function activateType(id) {
+      if (!confirm('Are you sure you want to activate this type?')) return;
+
+      fetch(`/admin/okr-types/${id}/activate`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': '{{ csrf_token() }}',
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          showToast('Success', 'Type activated successfully', 'success');
+          location.reload();
+        } else {
+          return response.json().then(data => {
+            showToast('Error', data.message || 'Failed to activate type', 'error');
+          });
+        }
+      });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -206,12 +258,6 @@
 
       @if (session('error'))
         showToast('Error', '{{ session('error') }}', 'error');
-      @endif
-
-      @if ($errors->any())
-        @foreach ($errors->all() as $error)
-          showToast('Validation Error', '{{ $error }}', 'error');
-        @endforeach
       @endif
 
       // Auto-dismiss alerts after 5 seconds

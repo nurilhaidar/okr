@@ -3,6 +3,19 @@
 @section('title', 'Add Organization Unit - OKR Management System')
 
 @section('content')
+  <!-- Breadcrumb -->
+  <div class="row justify-content-center mb-3">
+    <div class="col-12 col-lg-8">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{{ route('admin.org-units') }}">Organization Units</a></li>
+          <li class="breadcrumb-item active">Add New Organization Unit</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
   <div class="row justify-content-center">
     <div class="col-12 col-lg-8">
       <div class="card">

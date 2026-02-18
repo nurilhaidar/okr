@@ -24,6 +24,10 @@ class Objective extends Model
         'tracking_type',
         'tracker',
         'approver',
+        'start_date',
+        'end_date',
+        'last_check_in_date',
+        'next_check_in_due',
     ];
 
     protected function casts(): array
@@ -32,6 +36,10 @@ class Objective extends Model
             'weight' => 'decimal:4',
             'target_value' => 'float',
             'deadline' => 'datetime',
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'last_check_in_date' => 'datetime',
+            'next_check_in_due' => 'datetime',
         ];
     }
 

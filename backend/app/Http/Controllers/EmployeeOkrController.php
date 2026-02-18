@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Okr;
@@ -8,30 +8,34 @@ use App\Models\OkrType;
 use App\Models\Objective;
 use App\Models\Employee;
 use App\Models\OrgUnit;
-use App\Models\OrgUnitRole;
-use App\Services\CheckInService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
-class OkrController extends Controller
+class EmployeeOkrController extends Controller
 {
-    public function __construct(
-        protected CheckInService $checkInService
-    ) {}
-
     /**
-     * Display a listing of OKRs.
-     * Admin sees all OKRs with filtering.
+     * Display a listing of employee's OKRs.
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+
         // Get filter parameters
         $search = $request->query('search', '');
         $owner = $request->query('owner', '');
-        $owner_type = $request->query('owner_type', '');
         $status = $request->query('status', '');
 
-        // Build query with all relationships
-        $query = Okr::with(['okrType', 'employee', 'orgUnit', 'orgUnit.orgUnitEmployees.employee', 'objectives.checkIns', 'objectives.checkIns.approvalLogs', 'objectives.trackerEmployee', 'objectives.approverEmployee'])
+        // Build query - Employee sees only OKRs where they are owner, tracker, or approver
+        $query = Okr::with(['okrType', 'employee', 'orgUnit', 'objectives.checkIns', 'objectives.checkIns.approvalLogs', 'objectives.trackerEmployee', 'objectives.approverEmployee'])
+            ->where(function ($query) use ($user) {
+                $query->where('employee_id', $user->id)
+                    ->orWhereHas('objectives', function ($q) use ($user) {
+                        $q->where('tracker', $user->id);
+                    })
+                    ->orWhereHas('objectives', function ($q) use ($user) {
+                        $q->where('approver', $user->id);
+                    });
+            })
             ->orderBy('created_at', 'desc');
 
         // Get all OKRs first
@@ -60,18 +64,6 @@ class OkrController extends Controller
             })->values();
         }
 
-        // Filter by owner type (employee or orgunit)
-        if ($owner_type !== '' && $owner_type !== null) {
-            $okrs = $okrs->filter(function ($okr) use ($owner_type) {
-                if ($owner_type === 'employee') {
-                    return $okr->employee_id !== null;
-                } elseif ($owner_type === 'orgunit') {
-                    return $okr->orgunit_id !== null;
-                }
-                return true;
-            })->values();
-        }
-
         // Filter by status (active/inactive)
         if ($status !== '' && $status !== null) {
             $okrs = $okrs->filter(function ($okr) use ($status) {
@@ -84,11 +76,26 @@ class OkrController extends Controller
             })->values();
         }
 
-        return view('admin.okrs.index', compact('okrs'));
+        // Determine role for each OKR
+        foreach ($okrs as &$okr) {
+            $okr->role = 'owner';
+            foreach ($okr->objectives as $obj) {
+                if ($obj->tracker == $user->id) {
+                    $okr->role = 'tracker';
+                    break;
+                }
+                if ($obj->approver == $user->id) {
+                    $okr->role = 'approver';
+                    break;
+                }
+            }
+        }
+
+        return view('employee.okrs.index', compact('okrs'));
     }
 
     /**
-     * Show the form for creating a new OKR.
+     * Show form for creating a new OKR.
      */
     public function create()
     {
@@ -96,7 +103,7 @@ class OkrController extends Controller
         $employees = Employee::active()->get();
         $orgUnits = OrgUnit::active()->get();
 
-        return view('admin.okrs.create', compact('okrTypes', 'employees', 'orgUnits'));
+        return view('employee.okrs.create', compact('okrTypes', 'employees', 'orgUnits'));
     }
 
     /**
@@ -104,19 +111,35 @@ class OkrController extends Controller
      */
     public function edit($id)
     {
+        $user = Auth::user();
         $okr = Okr::with(['okrType', 'employee', 'orgUnit', 'objectives.trackerEmployee', 'objectives.approverEmployee'])->find($id);
 
         if (!$okr) {
             return redirect()
-                ->route('admin.okrs')
+                ->route('okrs.index')
                 ->with('error', 'OKR not found.');
+        }
+
+        // Check if user has access (owner, tracker, or approver)
+        $hasAccess = $okr->employee_id == $user->id;
+        foreach ($okr->objectives as $obj) {
+            if ($obj->tracker == $user->id || $obj->approver == $user->id) {
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return redirect()
+                ->route('okrs.index')
+                ->with('error', 'You do not have permission to edit this OKR.');
         }
 
         $okrTypes = OkrType::all();
         $employees = Employee::active()->get();
         $orgUnits = OrgUnit::active()->get();
 
-        return view('admin.okrs.edit', compact('okr', 'okrTypes', 'employees', 'orgUnits'));
+        return view('employee.okrs.edit', compact('okr', 'okrTypes', 'employees', 'orgUnits'));
     }
 
     /**
@@ -159,12 +182,12 @@ class OkrController extends Controller
                 $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
             }
 
-            if ($okrType->is_employee && !empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            if ($okrType->is_employee && !empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
             }
 
-            if (!$okrType->is_employee && !empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
+            if (!$okrType->is_employee && !empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
             }
 
             // Validate objective deadlines are within OKR period
@@ -189,12 +212,6 @@ class OkrController extends Controller
         });
 
         if ($validator->fails()) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors()->messages()
-                ], 422);
-            }
             return back()
                 ->withErrors($validator)
                 ->withInput();
@@ -224,21 +241,13 @@ class OkrController extends Controller
                     'tracking_type' => $objectiveData['tracking_type'],
                     'tracker' => $objectiveData['tracker'] ?? null,
                     'approver' => $objectiveData['approver'] ?? null,
-                    'start_date' => now()->toDateString() // Set start date to today
+                    'start_date' => now()->toDateString(),
                 ]);
             }
         }
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'OKR created successfully.'
-            ]);
-        }
-
         return redirect()
-            ->route('admin.okrs')
+            ->route('okrs.index')
             ->with('success', 'OKR created successfully.');
     }
 
@@ -247,18 +256,28 @@ class OkrController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
         $okr = Okr::with('objectives')->find($id);
 
         if (!$okr) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'OKR not found.'
-                ], 404);
-            }
             return redirect()
-                ->route('admin.okrs')
+                ->route('okrs.index')
                 ->with('error', 'OKR not found.');
+        }
+
+        // Check if user has access (owner, tracker, or approver)
+        $hasAccess = $okr->employee_id == $user->id;
+        foreach ($okr->objectives as $obj) {
+            if ($obj->tracker == $user->id || $obj->approver == $user->id) {
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return redirect()
+                ->route('okrs.index')
+                ->with('error', 'You do not have permission to edit this OKR.');
         }
 
         $validator = \Validator::make($request->all(), [
@@ -297,12 +316,12 @@ class OkrController extends Controller
                 $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
             }
 
-            if ($okrType->is_employee && !empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            if ($okrType->is_employee && !empty($request->employee_id)) {
+                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
             }
 
-            if (!$okrType->is_employee && !empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
+            if (!$okrType->is_employee && !empty($request->orgunit_id)) {
+                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
             }
 
             // Validate objective deadlines are within OKR period
@@ -327,12 +346,6 @@ class OkrController extends Controller
         });
 
         if ($validator->fails()) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors()->messages()
-                ], 422);
-            }
             return back()
                 ->withErrors($validator)
                 ->withInput();
@@ -340,7 +353,7 @@ class OkrController extends Controller
 
         $okr->update([
             'name' => $request->name,
-            'weight' => $request->weight / 100, // Convert percentage to decimal
+            'weight' => $request->weight / 100,
             'okr_type_id' => $request->okr_type_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
@@ -362,7 +375,7 @@ class OkrController extends Controller
                     if ($objective && $objective->okr_id == $okr->id) {
                         $objective->update([
                             'description' => $objectiveData['description'],
-                            'weight' => $objectiveData['weight'] / 100, // Convert percentage to decimal
+                            'weight' => $objectiveData['weight'] / 100,
                             'target_type' => $objectiveData['target_type'],
                             'target_value' => $objectiveData['target_value'],
                             'deadline' => $objectiveData['deadline'],
@@ -370,12 +383,6 @@ class OkrController extends Controller
                             'tracker' => $objectiveData['tracker'] ?? null,
                             'approver' => $objectiveData['approver'] ?? null,
                         ]);
-
-                        // Ensure start_date is set
-                        if (!$objective->start_date) {
-                            $objective->update(['start_date' => now()->toDateString()]);
-                        }
-
                         $newIds[] = $objective->id;
                     }
                 } else {
@@ -383,16 +390,15 @@ class OkrController extends Controller
                     $objective = Objective::create([
                         'okr_id' => $okr->id,
                         'description' => $objectiveData['description'],
-                        'weight' => $objectiveData['weight'] / 100, // Convert percentage to decimal
+                        'weight' => $objectiveData['weight'] / 100,
                         'target_type' => $objectiveData['target_type'],
                         'target_value' => $objectiveData['target_value'],
                         'deadline' => $objectiveData['deadline'],
                         'tracking_type' => $objectiveData['tracking_type'],
                         'tracker' => $objectiveData['tracker'] ?? null,
                         'approver' => $objectiveData['approver'] ?? null,
-                        'start_date' => now()->toDateString() // Set start date to today
+                        'start_date' => now()->toDateString(),
                     ]);
-
                     $newIds[] = $objective->id;
                 }
             }
@@ -402,16 +408,8 @@ class OkrController extends Controller
             Objective::whereIn('id', $toDelete)->delete();
         }
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'OKR updated successfully.'
-            ]);
-        }
-
         return redirect()
-            ->route('admin.okrs')
+            ->route('okrs.index')
             ->with('success', 'OKR updated successfully.');
     }
 
@@ -420,101 +418,26 @@ class OkrController extends Controller
      */
     public function destroy($id)
     {
+        $user = Auth::user();
         $okr = Okr::find($id);
 
         if (!$okr) {
             return redirect()
-                ->route('admin.okrs')
+                ->route('okrs.index')
                 ->with('error', 'OKR not found.');
+        }
+
+        // Check if user is the owner
+        if ($okr->employee_id != $user->id) {
+            return redirect()
+                ->route('okrs.index')
+                ->with('error', 'You do not have permission to delete this OKR.');
         }
 
         $okr->delete();
 
         return redirect()
-            ->route('admin.okrs')
+            ->route('okrs.index')
             ->with('success', 'OKR deleted successfully.');
-    }
-
-    /**
-     * Activate the specified OKR.
-     */
-    public function activate($id)
-    {
-        $okr = Okr::find($id);
-
-        if (!$okr) {
-            return redirect()
-                ->route('admin.okrs')
-                ->with('error', 'OKR not found.');
-        }
-
-        $okr->update(['is_active' => true]);
-
-        return redirect()
-            ->route('admin.okrs')
-            ->with('success', 'OKR activated successfully.');
-    }
-
-    /**
-     * Deactivate the specified OKR.
-     */
-    public function deactivate($id)
-    {
-        $okr = Okr::find($id);
-
-        if (!$okr) {
-            return redirect()
-                ->route('admin.okrs')
-                ->with('error', 'OKR not found.');
-        }
-
-        $okr->update(['is_active' => false]);
-
-        return redirect()
-            ->route('admin.okrs')
-            ->with('success', 'OKR deactivated successfully.');
-    }
-
-    /**
-     * Get available owners (employees and org units).
-     */
-    public function getAvailableOwners()
-    {
-        $employees = Employee::active()->get()->map(function ($employee) {
-            return [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'type' => 'employee',
-            ];
-        });
-
-        $orgUnits = OrgUnit::active()->get()->map(function ($unit) {
-            return [
-                'id' => $unit->id,
-                'name' => $unit->name,
-                'type' => 'orgunit',
-            ];
-        });
-
-        return response()->json([
-            'employees' => $employees,
-            'orgUnits' => $orgUnits,
-        ]);
-    }
-
-    /**
-     * Get all employees for dropdown.
-     */
-    public function getAllEmployees()
-    {
-        $employees = Employee::active()->get()->map(function ($employee) {
-            return [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'email' => $employee->email,
-            ];
-        });
-
-        return response()->json($employees);
     }
 }

@@ -122,7 +122,7 @@ class EmployeeController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'position' => 'nullable|string|max:255',
             'role_id' => 'nullable|exists:role,id',
-            'is_active' => 'boolean',
+            'is_active' => 'required|in:0,1',
         ]);
 
         $employee = Employee::create([
@@ -132,7 +132,7 @@ class EmployeeController extends Controller
             'password' => Hash::make($request->password),
             'position' => $request->position,
             'role_id' => $request->role_id,
-            'is_active' => $request->has('is_active'),
+            'is_active' => (bool) $request->is_active,
         ]);
 
         return redirect()
@@ -178,10 +178,17 @@ class EmployeeController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'position' => 'nullable|string|max:255',
             'role_id' => 'nullable|exists:role,id',
-            'is_active' => 'boolean',
+            'is_active' => 'required|in:0,1',
         ]);
 
-        $employee->update($request->only(['name', 'email', 'username', 'position', 'role_id', 'is_active']));
+        $employee->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'username' => $request->username,
+            'position' => $request->position,
+            'role_id' => $request->role_id,
+            'is_active' => (bool) $request->is_active,
+        ]);
 
         if ($request->has('password') && $request->password) {
             $employee->update(['password' => Hash::make($request->password)]);
@@ -195,17 +202,30 @@ class EmployeeController extends Controller
     /**
      * Deactivate the specified employee.
      */
-    public function deactivate($id)
+    public function deactivate(Request $request, $id)
     {
         $employee = Employee::find($id);
 
         if (!$employee) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found.'
+                ], 404);
+            }
             return redirect()
                 ->route('admin.employees')
                 ->with('error', 'Employee not found.');
         }
 
         $employee->update(['is_active' => false]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee deactivated successfully.'
+            ]);
+        }
 
         return redirect()
             ->route('admin.employees')
@@ -215,17 +235,30 @@ class EmployeeController extends Controller
     /**
      * Activate the specified employee.
      */
-    public function activate($id)
+    public function activate(Request $request, $id)
     {
         $employee = Employee::find($id);
 
         if (!$employee) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found.'
+                ], 404);
+            }
             return redirect()
                 ->route('admin.employees')
                 ->with('error', 'Employee not found.');
         }
 
         $employee->update(['is_active' => true]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee activated successfully.'
+            ]);
+        }
 
         return redirect()
             ->route('admin.employees')
@@ -235,17 +268,43 @@ class EmployeeController extends Controller
     /**
      * Remove the specified employee.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $employee = Employee::find($id);
 
         if (!$employee) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found.'
+                ], 404);
+            }
             return redirect()
                 ->route('admin.employees')
                 ->with('error', 'Employee not found.');
         }
 
+        // Prevent users from deleting themselves
+        if ($employee->id === auth()->id()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot delete your own account.'
+                ], 403);
+            }
+            return redirect()
+                ->route('admin.employees')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
         $employee->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee deleted successfully.'
+            ]);
+        }
 
         return redirect()
             ->route('admin.employees')

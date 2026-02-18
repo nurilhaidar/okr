@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@php
+    $layout = auth()->user()->role && auth()->user()->role->name === 'Admin' ? 'layouts.app' : 'layouts.employee';
+@endphp
+@extends($layout)
 
 @section('title', 'New Check-in - OKR Management System')
 
@@ -18,6 +21,19 @@
 @endpush
 
 @section('content')
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.check-ins.index') }}">Check-ins</a></li>
+                    <li class="breadcrumb-item active">Create New Check-in</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12">
             <div class="card">

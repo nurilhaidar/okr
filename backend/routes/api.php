@@ -49,11 +49,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('okr-types', OkrTypeController::class);
 
     // OKR Routes
-    Route::get('/okrs/available-owners', [OkrController::class, 'getAvailableOwners']);
-    Route::get('/okrs/by-employee/{employeeId}', [OkrController::class, 'getByEmployee']);
-    Route::apiResource('okrs', OkrController::class);
-    Route::patch('/okrs/{id}/activate', [OkrController::class, 'activate']);
-    Route::patch('/okrs/{id}/deactivate', [OkrController::class, 'deactivate']);
+    Route::get('/okrs/available-owners', [OkrController::class, 'getAvailableOwners'])->name('api.okrs.owners');
+    Route::get('/okrs/by-employee/{employeeId}', [OkrController::class, 'getByEmployee'])->name('api.okrs.by-employee');
+    Route::apiResource('okrs', OkrController::class)
+        ->only(['index', 'show', 'store', 'update', 'destroy'])
+        ->names([
+            'index' => 'api.okrs.index',
+            'show' => 'api.okrs.show',
+            'store' => 'api.okrs.store',
+            'update' => 'api.okrs.update',
+            'destroy' => 'api.okrs.destroy',
+        ]);
+    Route::patch('/okrs/{id}/activate', [OkrController::class, 'activate'])->name('api.okrs.activate');
+    Route::patch('/okrs/{id}/deactivate', [OkrController::class, 'deactivate'])->name('api.okrs.deactivate');
 
     // Objective Routes
     Route::apiResource('objectives', ObjectiveController::class);

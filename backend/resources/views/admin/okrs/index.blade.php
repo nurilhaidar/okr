@@ -28,6 +28,32 @@
             overflow: hidden;
         }
 
+        /* Fix Select2 overflow */
+        #searchForm {
+            overflow: visible;
+        }
+
+        #searchForm .select2-container {
+            max-width: 100%;
+        }
+
+        .select2-owner-dropdown {
+            max-width: 300px !important;
+        }
+
+        /* Smaller filter badge */
+        .filter-badge-sm {
+            font-size: 0.65rem !important;
+            padding: 0 !important;
+            min-width: 1.2rem;
+            height: 1.2rem;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 0.25rem;
+            line-height: 1 !important;
+        }
+
         /* Check-in modal styles */
         .check-in-modal .modal-dialog {
             max-width: 900px;
@@ -92,19 +118,173 @@
 @endphp
 
 @section('content')
+    <!-- Admin View - All OKRs Table -->
     <div class="row">
         <div class="col-12 col-lg-12 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-1">Objectives & Key Results</h4>
-                            <p class="text-muted mb-0">Manage organizational and individual OKRs.</p>
+                    <h4 class="mb-3">Objectives & Key Results</h4>
+                    <!-- Search and Actions Form -->
+                    <form method="GET" action="{{ route('admin.okrs') }}" id="searchForm">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Search by Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ti ti-search"></i></span>
+                                    <input type="text" class="form-control" name="search"
+                                        placeholder="Search by OKR name..." value="{{ request('search') }}"
+                                        id="searchInput">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Search by Owner</label>
+                                <select name="owner" class="form-select select2" id="ownerSelect">
+                                    <option value="">All Owners</option>
+                                    @php
+                                        $owners = collect();
+                                        foreach ($okrs as $okr) {
+                                            if ($okr->employee_id && $okr->employee) {
+                                                $owners->push(
+                                                    (object) [
+                                                        'id' => 'employee_' . $okr->employee_id,
+                                                        'name' => $okr->employee->name,
+                                                        'type' => 'employee',
+                                                        'icon' => '👤',
+                                                    ],
+                                                );
+                                            }
+                                            if ($okr->orgunit_id && $okr->orgUnit) {
+                                                $owners->push(
+                                                    (object) [
+                                                        'id' => 'orgunit_' . $okr->orgunit_id,
+                                                        'name' => $okr->orgUnit->name,
+                                                        'type' => 'orgunit',
+                                                        'icon' => '🏢',
+                                                    ],
+                                                );
+                                            }
+                                        }
+                                        $owners = $owners->unique('id')->sortBy('name');
+                                    @endphp
+                                    @foreach ($owners as $owner)
+                                        <option value="{{ $owner->id }}" data-icon="{{ $owner->icon }}"
+                                            {{ request('owner') == $owner->id ? 'selected' : '' }}>
+                                            {{ $owner->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="ti ti-search"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()" title="Reset">
+                                        <i class="ti ti-refresh"></i>
+                                    </button>
+                                    <div class="ms-auto d-flex gap-2">
+                                        <button type="button"
+                                            class="btn btn-outline-primary position-relative d-flex align-items-center"
+                                            data-bs-toggle="modal" data-bs-target="#filterModal" id="filterButton">
+                                            <i class="ti ti-filter me-1"></i>Filter
+                                            <span class="badge bg-primary text-white filter-badge-sm ms-1" id="filterBadge"
+                                                style="display: none;">
+                                                0
+                                            </span>
+                                        </button>
+                                        <a href="{{ route('admin.okrs.create') }}" class="btn btn-primary">
+                                            <i class="ti ti-plus me-1"></i>Add OKR
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <a href="{{ route('admin.okrs.create') }}" class="btn btn-primary">
-                            <i class="ti ti-plus me-2"></i>Add OKR
-                        </a>
-                    </div>
+                        <!-- Preserve filter parameters -->
+                        @if (request('owner'))
+                            <input type="hidden" name="owner" value="{{ request('owner') }}">
+                        @endif
+                        @if (request('owner_type'))
+                            <input type="hidden" name="owner_type" value="{{ request('owner_type') }}">
+                        @endif
+                        @if (request('status'))
+                            <input type="hidden" name="status" value="{{ request('status') }}">
+                        @endif
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Filter OKRs</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="GET" action="{{ route('admin.okrs') }}" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Owner Type</label>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <input type="hidden" name="owner_type" id="ownerTypeInput"
+                                        value="{{ request('owner_type', '') }}">
+                                    <button type="button"
+                                        class="btn owner-type-btn {{ request('owner_type', '') === '' ? 'btn-primary' : 'btn-outline-primary' }}"
+                                        data-value="">
+                                        All
+                                    </button>
+                                    <button type="button"
+                                        class="btn owner-type-btn {{ request('owner_type') === 'employee' ? 'btn-primary' : 'btn-outline-primary' }}"
+                                        data-value="employee">
+                                        <i class="ti ti-user me-1"></i>Employee
+                                    </button>
+                                    <button type="button"
+                                        class="btn owner-type-btn {{ request('owner_type') === 'orgunit' ? 'btn-primary' : 'btn-outline-primary' }}"
+                                        data-value="orgunit">
+                                        <i class="ti ti-building me-1"></i>Org Unit
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Status</label>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <input type="hidden" name="status" id="statusInput"
+                                        value="{{ request('status', '') }}">
+                                    <button type="button"
+                                        class="btn status-btn {{ request('status', '') === '' ? 'btn-primary' : 'btn-outline-primary' }}"
+                                        data-value="">
+                                        All
+                                    </button>
+                                    <button type="button"
+                                        class="btn status-btn {{ request('status') === 'active' ? 'btn-success' : 'btn-outline-success' }}"
+                                        data-value="active">
+                                        <i class="ti ti-check me-1"></i>Active
+                                    </button>
+                                    <button type="button"
+                                        class="btn status-btn {{ request('status') === 'inactive' ? 'btn-secondary' : 'btn-outline-secondary' }}"
+                                        data-value="inactive">
+                                        <i class="ti ti-x me-1"></i>Inactive
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Preserve search and owner parameter -->
+                        @if (request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        @if (request('owner'))
+                            <input type="hidden" name="owner" value="{{ request('owner') }}">
+                        @endif
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="filterForm" class="btn btn-primary">
+                        <i class="ti ti-filter me-1"></i>Apply Filters
+                    </button>
                 </div>
             </div>
         </div>
@@ -119,11 +299,12 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th style="width: 30%;">Name</th>
-                                    <th style="width: 15%;">Type</th>
-                                    <th style="width: 15%;">Owner</th>
-                                    <th style="width: 15%;">Period</th>
-                                    <th style="width: 15%;">Progress</th>
+                                    <th style="width: 25%;">Name</th>
+                                    <th style="width: 12%;">Type</th>
+                                    <th style="width: 12%;">Owner</th>
+                                    <th style="width: 12%;">Period</th>
+                                    <th style="width: 12%;">Progress</th>
+                                    <th style="width: 12%;">Status</th>
                                     <th style="width: 10%;">Actions</th>
                                 </tr>
                             </thead>
@@ -168,6 +349,13 @@
                                             </div>
                                         </td>
                                         <td>
+                                            @if ($okr->is_active)
+                                                <span class="badge bg-label-success">Active</span>
+                                            @else
+                                                <span class="badge bg-label-secondary">Inactive</span>
+                                            @endif
+                                        </td>
+                                        <td>
                                             <div class="d-flex gap-1">
                                                 <a href="{{ route('admin.okrs.edit', $okr->id) }}"
                                                     class="btn btn-sm btn-outline-primary"
@@ -208,8 +396,9 @@
                                         </td>
                                     </tr>
                                     <!-- Objectives Row (hidden by default) -->
-                                    <tr class="objectives-row" id="objectives-{{ $okr->id }}" style="display: none;">
-                                        <td colspan="6" class="p-3 bg-light">
+                                    <tr class="objectives-row" id="objectives-{{ $okr->id }}"
+                                        style="display: none;">
+                                        <td colspan="7" class="p-3 bg-light">
                                             <h6 class="mb-3">Objectives</h6>
                                             @forelse($okr->objectives as $objective)
                                                 <div class="objective-item">
@@ -270,7 +459,8 @@
                                                                 <i class="ti ti-check me-1"></i>Check In
                                                             </button>
                                                         @else
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary" disabled
                                                                 title="OKR is inactive"
                                                                 style="opacity: 0.5; cursor: not-allowed;">
                                                                 <i class="ti ti-check me-1"></i>Check In
@@ -285,7 +475,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">No OKRs found</td>
+                                        <td colspan="7" class="text-center text-muted">No OKRs found</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -412,7 +602,124 @@
 
             // Handle check-in form submission
             document.getElementById('checkInForm').addEventListener('submit', handleCheckInSubmit);
+
+            // Update filter badge on page load
+            updateFilterBadge();
+
+            // Initialize Select2 for owner dropdown
+            $('#ownerSelect').select2({
+                dropdownParent: $('#searchForm'),
+                width: 'resolve',
+                dropdownAutoWidth: false,
+                minimumResultsForSearch: 0,
+                containerCssClass: 'select2-owner-container',
+                dropdownCssClass: 'select2-owner-dropdown',
+                templateResult: function(owner) {
+                    if (!owner.id) {
+                        return owner.text;
+                    }
+                    const $owner = $(owner.element);
+                    const icon = $owner.data('icon') || '';
+                    return $(`<span>${icon} ${owner.text}</span>`);
+                },
+                templateSelection: function(owner) {
+                    if (!owner.id) {
+                        return owner.text;
+                    }
+                    const $owner = $(owner.element);
+                    const icon = $owner.data('icon') || '';
+                    return $(`<span>${icon} ${owner.text}</span>`);
+                }
+            });
+
+            // Handle owner type button clicks (update selection without submitting)
+            document.querySelectorAll('.owner-type-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const ownerType = this.getAttribute('data-value');
+                    document.getElementById('ownerTypeInput').value = ownerType;
+
+                    // Update button styles
+                    document.querySelectorAll('.owner-type-btn').forEach(b => {
+                        const value = b.getAttribute('data-value');
+                        if (value === ownerType) {
+                            b.classList.remove('btn-outline-primary');
+                            b.classList.add('btn-primary');
+                        } else {
+                            b.classList.remove('btn-primary');
+                            b.classList.add('btn-outline-primary');
+                        }
+                    });
+                });
+            });
+
+            // Handle status button clicks (update selection without submitting)
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const status = this.getAttribute('data-value');
+                    document.getElementById('statusInput').value = status;
+
+                    // Update button styles
+                    document.querySelectorAll('.status-btn').forEach(b => {
+                        const value = b.getAttribute('data-value');
+                        if (value === status) {
+                            // Remove outline classes and add solid classes
+                            b.classList.remove('btn-outline-primary', 'btn-outline-success',
+                                'btn-outline-secondary');
+                            if (value === '') {
+                                b.classList.add('btn-primary');
+                            } else if (value === 'active') {
+                                b.classList.add('btn-success');
+                            } else if (value === 'inactive') {
+                                b.classList.add('btn-secondary');
+                            }
+                        } else {
+                            // Remove solid classes and add outline classes
+                            b.classList.remove('btn-primary', 'btn-success',
+                                'btn-secondary');
+                            if (value === '') {
+                                b.classList.add('btn-outline-primary');
+                            } else if (value === 'active') {
+                                b.classList.add('btn-outline-success');
+                            } else if (value === 'inactive') {
+                                b.classList.add('btn-outline-secondary');
+                            }
+                        }
+                    });
+                });
+            });
         });
+
+        // Function to update filter badge count (from URL - on page load)
+        function updateFilterBadge() {
+            const search = new URLSearchParams(window.location.search).get('search') || '';
+            const owner = new URLSearchParams(window.location.search).get('owner') || '';
+            const ownerType = new URLSearchParams(window.location.search).get('owner_type') || '';
+            const status = new URLSearchParams(window.location.search).get('status') || '';
+
+            let count = 0;
+            if (search) count++;
+            if (owner) count++;
+            if (ownerType) count++;
+            if (status) count++;
+
+            const badge = document.getElementById('filterBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Function to clear all filters and reload page
+        function clearSearch() {
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.delete('search');
+            searchParams.delete('owner');
+            searchParams.delete('owner_type');
+            searchParams.delete('status');
+            window.location.href = window.location.pathname;
+        }
 
         function openCheckInModal(objectiveId, description, targetValue, targetType) {
             currentObjectiveId = objectiveId;
@@ -519,18 +826,18 @@
                 <div class="check-in-card-body">
                     ${checkIn.comments ? `<p class="mb-2">${checkIn.comments}</p>` : ''}
                     ${checkIn.evidence_path ? `
-                                                            <a href="${checkIn.evidence_path}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                                                                <i class="ti ti-file me-1"></i>View Evidence
-                                                            </a>
-                                                        ` : ''}
+                                            <a href="${checkIn.evidence_path}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                                                <i class="ti ti-file me-1"></i>View Evidence
+                                            </a>
+                                        ` : ''}
                     ${status === 'pending' ? `
-                                                            <button type="button" class="btn btn-sm btn-success me-2" onclick="approveCheckIn(${checkIn.id})">
-                                                                <i class="ti ti-check me-1"></i>Approve
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-danger" onclick="rejectCheckIn(${checkIn.id})">
-                                                                <i class="ti ti-x me-1"></i>Reject
-                                                            </button>
-                                                        ` : ''}
+                                            <button type="button" class="btn btn-sm btn-success me-2" onclick="approveCheckIn(${checkIn.id})">
+                                                <i class="ti ti-check me-1"></i>Approve
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="rejectCheckIn(${checkIn.id})">
+                                                <i class="ti ti-x me-1"></i>Reject
+                                            </button>
+                                        ` : ''}
                 </div>
             `;
             return card;
@@ -670,7 +977,7 @@
                 } else {
                     showToast('Error', data.message || 'Failed to create check-in', 'error');
                     if (data.errors) {
-                        const errorMessages = Object.values(data.errors).flat().join('\\n');
+                        const errorMessages = Object.values(data.errors).flat().join('\n');
                         showToast('Validation Error', errorMessages, 'error');
                     }
                 }

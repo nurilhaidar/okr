@@ -6,11 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\CheckIn;
 use App\Models\Employee;
 use App\Models\Objective;
+use App\Notifications\CheckInSubmittedNotification;
+use App\Notifications\CheckInApprovedNotification;
+use App\Notifications\CheckInRejectedNotification;
+use App\Services\CheckInService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class CheckInController extends Controller
 {
+    public function __construct(
+        protected CheckInService $checkInService
+    ) {}
+
     public function index(Request $request)
     {
         $query = CheckIn::with(['objective.trackerEmployee', 'objective.approverEmployee', 'approvalLogs']);
@@ -96,6 +104,11 @@ class CheckInController extends Controller
 
         // Automatically submit for approval (create pending log)
         $checkIn->submitForApproval();
+
+        // Send notification to approver
+        if ($objective->approverEmployee) {
+            $objective->approverEmployee->notify(new CheckInSubmittedNotification($checkIn));
+        }
 
         $checkIn->load(['objective', 'approvalLogs']);
         $checkIn->current_status = $checkIn->getCurrentStatusAttribute();
@@ -257,6 +270,13 @@ class CheckInController extends Controller
         }
 
         $checkIn->approve();
+
+        // Send notification to tracker
+        $objective = $checkIn->objective;
+        if ($objective->trackerEmployee) {
+            $objective->trackerEmployee->notify(new CheckInApprovedNotification($checkIn));
+        }
+
         $checkIn->load(['objective', 'approvalLogs']);
         $checkIn->current_status = $checkIn->getCurrentStatusAttribute();
 
@@ -323,6 +343,16 @@ class CheckInController extends Controller
         }
 
         $checkIn->reject();
+
+        // Get rejection reason from request if provided
+        $reason = request()->input('reason');
+
+        // Send notification to tracker
+        $objective = $checkIn->objective;
+        if ($objective->trackerEmployee) {
+            $objective->trackerEmployee->notify(new CheckInRejectedNotification($checkIn, $reason));
+        }
+
         $checkIn->load(['objective', 'approvalLogs']);
         $checkIn->current_status = $checkIn->getCurrentStatusAttribute();
 

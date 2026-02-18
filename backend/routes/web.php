@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\OrgUnitRoleController;
 use App\Http\Controllers\Admin\OkrTypeController;
 use App\Http\Controllers\Admin\OkrController;
 use App\Http\Controllers\Admin\CheckInController;
+use App\Http\Controllers\EmployeeOkrController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,11 +44,11 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Protected Routes (require authentication)
 Route::middleware(['auth'])->group(function () {
 
-    // Employee Dashboard
+    // Dashboard (accessible by all)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Employee Management
-    Route::prefix('admin')->group(function () {
+    // Admin-only Routes
+    Route::middleware(['admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
 
         // Employees
@@ -64,9 +65,13 @@ Route::middleware(['auth'])->group(function () {
 
         // Roles
         Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles');
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
+        Route::get('/roles/data', [RoleController::class, 'data'])->name('admin.roles.data');
         Route::post('/roles', [RoleController::class, 'store'])->name('admin.roles.store');
         Route::put('/roles/{id}', [RoleController::class, 'update'])->name('admin.roles.update');
         Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
+        Route::post('/roles/{id}/activate', [RoleController::class, 'activate'])->name('admin.roles.activate');
+        Route::post('/roles/{id}/deactivate', [RoleController::class, 'deactivate'])->name('admin.roles.deactivate');
 
         // Organization Units
         Route::prefix('org-units')->group(function () {
@@ -109,13 +114,16 @@ Route::middleware(['auth'])->group(function () {
         // OKR Types
         Route::prefix('okr-types')->group(function () {
             Route::get('/', [OkrTypeController::class, 'index'])->name('admin.okr-types');
+            Route::get('/create', [OkrTypeController::class, 'create'])->name('admin.okr-types.create');
             Route::get('/all', [OkrTypeController::class, 'getAll'])->name('admin.okr-types.all');
             Route::post('/', [OkrTypeController::class, 'store'])->name('admin.okr-types.store');
             Route::put('/{id}', [OkrTypeController::class, 'update'])->name('admin.okr-types.update');
             Route::delete('/{id}', [OkrTypeController::class, 'destroy'])->name('admin.okr-types.destroy');
+            Route::post('/{id}/deactivate', [OkrTypeController::class, 'deactivate'])->name('admin.okr-types.deactivate');
+            Route::post('/{id}/activate', [OkrTypeController::class, 'activate'])->name('admin.okr-types.activate');
         });
 
-        // OKRs
+        // OKRs (Admin only - sees all OKRs)
         Route::prefix('okrs')->group(function () {
             Route::get('/', [OkrController::class, 'index'])->name('admin.okrs');
             Route::get('/create', [OkrController::class, 'create'])->name('admin.okrs.create');
@@ -128,22 +136,36 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/available-owners', [OkrController::class, 'getAvailableOwners'])->name('admin.okrs.owners');
             Route::get('/employees/all', [OkrController::class, 'getAllEmployees'])->name('admin.okrs.employees');
         });
+    });
 
-        // Check-ins
-        Route::prefix('check-ins')->group(function () {
-            Route::get('/', [CheckInController::class, 'index'])->name('admin.check-ins.index');
-            Route::get('/create', [CheckInController::class, 'create'])->name('admin.check-ins.create');
-            Route::get('/pending', [CheckInController::class, 'pendingApprovals'])->name('admin.check-ins.pending');
-            Route::get('/objective/{objectiveId}', [CheckInController::class, 'getByObjective'])->name('admin.check-ins.by-objective');
-            Route::get('/objective/{objectiveId}/json', [CheckInController::class, 'getByObjectiveJson'])->name('admin.check-ins.by-objective-json');
-            Route::post('/', [CheckInController::class, 'store'])->name('admin.check-ins.store');
-            Route::get('/{id}', [CheckInController::class, 'show'])->name('admin.check-ins.show');
-            Route::get('/{id}/edit', [CheckInController::class, 'edit'])->name('admin.check-ins.edit');
-            Route::put('/{id}', [CheckInController::class, 'update'])->name('admin.check-ins.update');
-            Route::delete('/{id}', [CheckInController::class, 'destroy'])->name('admin.check-ins.destroy');
-            Route::post('/{id}/approve', [CheckInController::class, 'approve'])->name('admin.check-ins.approve');
-            Route::post('/{id}/reject', [CheckInController::class, 'reject'])->name('admin.check-ins.reject');
-        });
+    // Employee OKR Routes (no admin prefix)
+    Route::prefix('okrs')->group(function () {
+        Route::get('/', [EmployeeOkrController::class, 'index'])->name('okrs.index');
+        Route::get('/create', [EmployeeOkrController::class, 'create'])->name('okrs.create');
+        Route::get('/{id}/edit', [EmployeeOkrController::class, 'edit'])->name('okrs.edit');
+        Route::post('/', [EmployeeOkrController::class, 'store'])->name('okrs.store');
+        Route::put('/{id}', [EmployeeOkrController::class, 'update'])->name('okrs.update');
+        Route::delete('/{id}', [EmployeeOkrController::class, 'destroy'])->name('okrs.destroy');
+        Route::post('/{id}/activate', [EmployeeOkrController::class, 'activate'])->name('okrs.activate');
+        Route::post('/{id}/deactivate', [EmployeeOkrController::class, 'deactivate'])->name('okrs.deactivate');
+        Route::get('/available-owners', [EmployeeOkrController::class, 'getAvailableOwners'])->name('okrs.owners');
+        Route::get('/employees/all', [EmployeeOkrController::class, 'getAllEmployees'])->name('okrs.employees');
+    });
+
+    // Check-ins (accessible by all authenticated users)
+    Route::prefix('admin/check-ins')->group(function () {
+        Route::get('/', [CheckInController::class, 'index'])->name('admin.check-ins.index');
+        Route::get('/create', [CheckInController::class, 'create'])->name('admin.check-ins.create');
+        Route::get('/pending', [CheckInController::class, 'pendingApprovals'])->name('admin.check-ins.pending');
+        Route::get('/objective/{objectiveId}', [CheckInController::class, 'getByObjective'])->name('admin.check-ins.by-objective');
+        Route::get('/objective/{objectiveId}/json', [CheckInController::class, 'getByObjectiveJson'])->name('admin.check-ins.by-objective-json');
+        Route::post('/', [CheckInController::class, 'store'])->name('admin.check-ins.store');
+        Route::get('/{id}', [CheckInController::class, 'show'])->name('admin.check-ins.show');
+        Route::get('/{id}/edit', [CheckInController::class, 'edit'])->name('admin.check-ins.edit');
+        Route::put('/{id}', [CheckInController::class, 'update'])->name('admin.check-ins.update');
+        Route::delete('/{id}', [CheckInController::class, 'destroy'])->name('admin.check-ins.destroy');
+        Route::post('/{id}/approve', [CheckInController::class, 'approve'])->name('admin.check-ins.approve');
+        Route::post('/{id}/reject', [CheckInController::class, 'reject'])->name('admin.check-ins.reject');
     });
 
     // User Profile

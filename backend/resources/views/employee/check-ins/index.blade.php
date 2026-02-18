@@ -22,89 +22,60 @@
         <div class="col-12 col-lg-12 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="mb-3">Check-ins</h4>
-                    <!-- Search and Actions Form -->
-                    <form method="GET" action="{{ route('admin.check-ins.index') }}" id="searchForm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Check-ins</h4>
+                            <p class="text-muted mb-0">Manage and review objective check-ins.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.check-ins.index') }}" id="filterForm">
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-8">
+                            <div class="col-md-4">
                                 <label class="form-label">Search</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="ti ti-search"></i></span>
                                     <input type="text" class="form-control" name="search"
                                         placeholder="Search by objective or OKR name..." value="{{ request('search') }}"
                                         id="searchInput">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="ti ti-search me-1"></i>Search
-                                    </button>
-                                    @if(request('search'))
-                                        <a href="{{ request()->fullUrlWithQuery(['search' => '']) }}" class="btn btn-outline-secondary">
-                                            <i class="ti ti-x"></i>
-                                        </a>
-                                    @endif
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="d-flex gap-2 justify-content-md-end">
-                                    <button type="button" class="btn btn-outline-primary position-relative d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#filterModal" id="filterButton">
-                                        <i class="ti ti-filter me-1"></i>Filter
-                                        <span class="badge bg-primary text-white badge-center ms-1" id="filterBadge" style="display: none;">
-                                            0
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Preserve filter parameters -->
-                        @if(request('status'))
-                            <input type="hidden" name="status" value="{{ request('status') }}">
-                        @endif
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter Modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Filter Check-ins</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form method="GET" action="{{ route('admin.check-ins.index') }}" id="filterForm">
-                        <div class="row g-3">
-                            <div class="col-12">
+                            <div class="col-md-8">
                                 <label class="form-label">Status</label>
-                                <div class="d-flex gap-2 flex-wrap">
+                                <div class="d-flex flex-wrap gap-2">
                                     <input type="hidden" name="status" id="statusInput" value="{{ request('status', '') }}">
-                                    <button type="button" class="btn status-btn {{ request('status', '') === '' ? 'btn-primary' : 'btn-outline-primary' }}" data-value="">
+                                    <button type="button" class="status-btn btn {{ request('status', '') === '' ? 'btn-primary' : 'btn-outline-primary' }}"
+                                        data-status="">
                                         All
                                     </button>
-                                    <button type="button" class="btn status-btn {{ request('status') === 'pending' ? 'btn-warning' : 'btn-outline-warning' }}" data-value="pending">
+                                    <button type="button" class="status-btn btn {{ request('status') === 'pending' ? 'btn-warning' : 'btn-outline-warning' }}"
+                                        data-status="pending">
                                         <i class="ti ti-clock me-1"></i>Pending
                                     </button>
-                                    <button type="button" class="btn status-btn {{ request('status') === 'approved' ? 'btn-success' : 'btn-outline-success' }}" data-value="approved">
+                                    <button type="button" class="status-btn btn {{ request('status') === 'approved' ? 'btn-success' : 'btn-outline-success' }}"
+                                        data-status="approved">
                                         <i class="ti ti-check me-1"></i>Approved
                                     </button>
-                                    <button type="button" class="btn status-btn {{ request('status') === 'rejected' ? 'btn-danger' : 'btn-outline-danger' }}" data-value="rejected">
+                                    <button type="button" class="status-btn btn {{ request('status') === 'rejected' ? 'btn-danger' : 'btn-outline-danger' }}"
+                                        data-status="rejected">
                                         <i class="ti ti-x me-1"></i>Rejected
                                     </button>
+                                    <a href="{{ route('admin.check-ins.index') }}" class="btn btn-outline-secondary">
+                                        <i class="ti ti-refresh me-1"></i>Reset
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                        <!-- Preserve search parameter -->
-                        @if(request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
-                        @endif
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="filterForm" class="btn btn-primary">
-                        <i class="ti ti-filter me-1"></i>Apply Filters
-                    </button>
                 </div>
             </div>
         </div>
@@ -278,64 +249,72 @@
 @section('page_scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Update filter badge on page load
-            updateFilterBadge();
+            // Status button click handlers
+            const statusButtons = document.querySelectorAll('.status-btn');
+            const statusInput = document.getElementById('statusInput');
+            const searchInput = document.getElementById('searchInput');
+            const filterForm = document.getElementById('filterForm');
 
-            // Handle status button clicks (update selection without submitting)
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const status = this.getAttribute('data-value');
-                    document.getElementById('statusInput').value = status;
+            statusButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const status = this.getAttribute('data-status');
+                    statusInput.value = status;
 
                     // Update button styles
-                    document.querySelectorAll('.status-btn').forEach(b => {
-                        const value = b.getAttribute('data-value');
-                        if (value === status) {
-                            // Remove outline classes and add solid classes
-                            b.classList.remove('btn-outline-primary', 'btn-outline-warning', 'btn-outline-success', 'btn-outline-danger');
-                            if (value === '') {
-                                b.classList.add('btn-primary');
-                            } else if (value === 'pending') {
-                                b.classList.add('btn-warning');
-                            } else if (value === 'approved') {
-                                b.classList.add('btn-success');
-                            } else if (value === 'rejected') {
-                                b.classList.add('btn-danger');
-                            }
-                        } else {
-                            // Remove solid classes and add outline classes
-                            b.classList.remove('btn-primary', 'btn-warning', 'btn-success', 'btn-danger');
-                            if (value === '') {
-                                b.classList.add('btn-outline-primary');
-                            } else if (value === 'pending') {
-                                b.classList.add('btn-outline-warning');
-                            } else if (value === 'approved') {
-                                b.classList.add('btn-outline-success');
-                            } else if (value === 'rejected') {
-                                b.classList.add('btn-outline-danger');
-                            }
+                    statusButtons.forEach(btn => {
+                        const btnStatus = btn.getAttribute('data-status');
+                        btn.classList.remove('btn-primary', 'btn-outline-primary',
+                            'btn-warning', 'btn-outline-warning',
+                            'btn-success', 'btn-outline-success',
+                            'btn-danger', 'btn-outline-danger');
+
+                        if (btnStatus === '') {
+                            btn.classList.add(btnStatus === status ? 'btn-primary' : 'btn-outline-primary');
+                        } else if (btnStatus === 'pending') {
+                            btn.classList.add(btnStatus === status ? 'btn-warning' : 'btn-outline-warning');
+                        } else if (btnStatus === 'approved') {
+                            btn.classList.add(btnStatus === status ? 'btn-success' : 'btn-outline-success');
+                        } else if (btnStatus === 'rejected') {
+                            btn.classList.add(btnStatus === status ? 'btn-danger' : 'btn-outline-danger');
                         }
                     });
+
+                    // Build URL with only non-empty parameters
+                    const urlParams = new URLSearchParams();
+                    if (searchInput.value.trim() !== '') {
+                        urlParams.append('search', searchInput.value.trim());
+                    }
+                    if (status !== '') {
+                        urlParams.append('status', status);
+                    }
+
+                    // Submit with clean URL
+                    const queryString = urlParams.toString();
+                    window.location.href = filterForm.action + (queryString ? '?' + queryString : '');
                 });
             });
+
+            // Auto-submit search on keyup with delay
+            let searchTimeout;
+            searchInput.addEventListener('keyup', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    const statusValue = statusInput.value || '';
+                    const searchValue = searchInput.value.trim();
+
+                    // Build URL with only non-empty parameters
+                    const urlParams = new URLSearchParams();
+                    if (searchValue !== '') {
+                        urlParams.append('search', searchValue);
+                    }
+                    if (statusValue !== '') {
+                        urlParams.append('status', statusValue);
+                    }
+
+                    const queryString = urlParams.toString();
+                    window.location.href = filterForm.action + (queryString ? '?' + queryString : '');
+                }, 500);
+            });
         });
-
-        // Function to update filter badge count (from URL - on page load)
-        function updateFilterBadge() {
-            const search = new URLSearchParams(window.location.search).get('search') || '';
-            const status = new URLSearchParams(window.location.search).get('status') || '';
-
-            let count = 0;
-            if (search) count++;
-            if (status) count++;
-
-            const badge = document.getElementById('filterBadge');
-            if (count > 0) {
-                badge.textContent = count;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
     </script>
 @endsection

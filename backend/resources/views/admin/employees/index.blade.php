@@ -3,39 +3,28 @@
 @section('title', 'Employees - OKR Management System')
 
 @section('content')
-    <div class="row">
-        <div class="col-12 col-lg-12 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-1">Employees</h4>
-                            <p class="text-muted mb-0">Manage your organization's employees and their roles.</p>
-                        </div>
-                        <a href="{{ route('admin.employees.create') }}" class="btn btn-primary">
-                            <i class="ti ti-user-plus me-2"></i>Add Employee
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Employees</li>
+                </ol>
+            </nav>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="row">
-        <div class="col-12 mb-4">
+    <!-- Filters Card with Header -->
+    <div class="row mb-4">
+        <div class="col-12">
             <div class="card">
                 <div class="card-body">
-                    <div class="row g-3">
+                    <h4 class="mb-1">Employees</h4>
+                    <!-- Filter Dropdowns -->
+                    <div class="row align-items-center mt-3">
                         <div class="col-md-3">
-                            <select id="filterRole" class="form-select">
-                                <option value="">All Roles</option>
-                                @foreach ($roles as $role)
-                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
                             <select id="filterStatus" class="form-select">
                                 <option value="">All Status</option>
                                 <option value="1">Active</option>
@@ -43,9 +32,24 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <button id="resetFilters" class="btn btn-outline-secondary">
-                                <i class="ti ti-x me-1"></i>Reset Filters
-                            </button>
+                            <label class="form-label">Role</label>
+                            <select id="filterRole" class="form-select">
+                                <option value="">All Roles</option>
+                                @foreach ($roles as $role)
+                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" id="resetFilters" class="btn btn-outline-secondary grow">
+                                    <i class="ti ti-refresh me-1"></i>Reset
+                                </button>
+                                <a href="{{ route('admin.employees.create') }}" class="btn btn-primary grow">
+                                    <i class="ti ti-plus me-1"></i>Add Employee
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -84,6 +88,8 @@
     <script src="{{ asset('plugin/vuexy/assets/js/tables-datatables-advanced.js') }}"></script>
     <script>
         let dataTable;
+        let currentStatusFilter = '';
+        let currentRoleFilter = '';
 
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize DataTable
@@ -95,8 +101,8 @@
                     url: '{{ route('admin.employees.data') }}',
                     type: 'GET',
                     data: function(d) {
-                        d.is_active = $('#filterStatus').val();
-                        d.role_id = $('#filterRole').val();
+                        d.is_active = currentStatusFilter;
+                        d.role_id = currentRoleFilter;
                     }
                 },
                 columns: [{
@@ -141,26 +147,16 @@
                     <i class="ti ti-pencil"></i>
                   </a>
                   ${row.is_active
-                    ? `<form method="POST" action="/admin/employees/${data}/deactivate" class="d-inline">
-                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Are you sure you want to deactivate this employee?')">
-                                          <i class="ti ti-player-pause"></i>
-                                        </button>
-                                      </form>`
-                    : `<form method="POST" action="/admin/employees/${data}/activate" class="d-inline">
-                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-success">
-                                          <i class="ti ti-player-play"></i>
-                                        </button>
-                                      </form>`
+                    ? `<button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleEmployeeStatus(${data}, false)">
+                                                                                                                                                                                                                    <i class="ti ti-player-pause"></i>
+                                                                                                                                                                                                                  </button>`
+                    : `<button type="button" class="btn btn-sm btn-outline-success" onclick="toggleEmployeeStatus(${data}, true)">
+                                                                                                                                                                                                                    <i class="ti ti-player-play"></i>
+                                                                                                                                                                                                                  </button>`
                   }
-                  <form method="POST" action="/admin/employees/${data}" class="d-inline">
-                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this employee? This action cannot be undone.')">
-                      <i class="ti ti-trash"></i>
-                    </button>
-                  </form>
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteEmployee(${data})">
+                    <i class="ti ti-trash"></i>
+                  </button>
                 </div>
               `;
                         }
@@ -171,17 +167,11 @@
                 ],
                 language: {
                     search: '_INPUT_',
-                    searchPlaceholder: 'Search employees...',
-                    lengthMenu: 'Show _MENU_ entries per page',
+                    searchPlaceholder: 'Search',
+                    lengthMenu: 'Show _MENU_',
                     info: 'Showing _START_ to _END_ of _TOTAL_ employees',
                     infoEmpty: 'No employees found',
                     infoFiltered: '(filtered from _MAX_ total employees)',
-                    paginate: {
-                        first: '<i class="ti ti-chevrons-left"></i>',
-                        previous: '<i class="ti ti-chevron-left"></i>',
-                        next: '<i class="ti ti-chevron-right"></i>',
-                        last: '<i class="ti ti-chevrons-right"></i>'
-                    }
                 },
                 dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
                     '<"row"<"col-sm-12"tr>>' +
@@ -191,6 +181,27 @@
             // Custom length menu with Bootstrap styling
             $('div.dataTables_length select').addClass('form-select form-select-sm');
             $('div.dataTables_filter input').addClass('form-control form-control-sm');
+
+            // Status filter handler
+            $('#filterStatus').on('change', function() {
+                currentStatusFilter = $(this).val();
+                dataTable.ajax.reload();
+            });
+
+            // Role filter handler
+            $('#filterRole').on('change', function() {
+                currentRoleFilter = $(this).val();
+                dataTable.ajax.reload();
+            });
+
+            // Reset filters handler
+            $('#resetFilters').on('click', function() {
+                $('#filterStatus').val('');
+                $('#filterRole').val('');
+                currentStatusFilter = '';
+                currentRoleFilter = '';
+                dataTable.ajax.reload();
+            });
 
             // Display toastr notifications for CRUD operations
             @if (session('success'))
@@ -209,16 +220,64 @@
 
             // Auto-dismiss alerts after 5 seconds
 
-            // Filter handlers
-            $('#filterRole, #filterStatus').on('change', function() {
-                dataTable.ajax.reload();
-            });
+            // Delete employee function
+            window.deleteEmployee = function(id) {
+                if (confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+                    fetch(`/admin/employees/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Success', data.message || 'Employee deleted successfully',
+                                    'success');
+                                dataTable.ajax.reload();
+                            } else {
+                                showToast('Warning', data.message || 'Failed to delete employee',
+                                    'warning');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error', 'Failed to delete employee', 'error');
+                        });
+                }
+            };
 
-            $('#resetFilters').on('click', function() {
-                $('#filterRole').val('');
-                $('#filterStatus').val('');
-                dataTable.ajax.reload();
-            });
+            // Toggle employee status function
+            window.toggleEmployeeStatus = function(id, activate) {
+                const action = activate ? 'activate' : 'deactivate';
+                const confirmMsg = activate ?
+                    'Are you sure you want to activate this employee?' :
+                    'Are you sure you want to deactivate this employee?';
+
+                if (confirm(confirmMsg)) {
+                    fetch(`/admin/employees/${id}/${action}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Success', data.message || `Employee ${action}d successfully`,
+                                    'success');
+                                dataTable.ajax.reload();
+                            } else {
+                                showToast('Warning', data.message || `Failed to ${action} employee`,
+                                    'warning');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error', `Failed to ${action} employee`, 'error');
+                        });
+                }
+            };
 
             // Auto-dismiss alerts after 5 seconds
             setTimeout(() => {

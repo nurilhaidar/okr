@@ -5,11 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Objective;
 use App\Models\Okr;
+use App\Services\CheckInService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ObjectiveController extends Controller
 {
+    public function __construct(
+        protected CheckInService $checkInService
+    ) {}
+
     public function index(Request $request)
     {
         $query = Objective::with(['okr', 'trackerEmployee', 'approverEmployee']);
@@ -74,6 +80,8 @@ class ObjectiveController extends Controller
             'tracking_type' => 'required|in:daily,weekly,monthly,quarterly',
             'tracker' => 'required|integer|exists:employee,id',
             'approver' => 'required|integer|exists:employee,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after:start_date',
         ]);
 
         if ($validator->fails()) {
@@ -93,8 +101,13 @@ class ObjectiveController extends Controller
             ], 422);
         }
 
-        $objective = Objective::create($request->all());
+        // Set start_date to current date if not provided
+        $data = $request->all();
+        if (!isset($data['start_date']) || $data['start_date'] === null) {
+            $data['start_date'] = now()->toDateString();
+        }
 
+        $objective = Objective::create($data);
         $objective->load(['okr', 'trackerEmployee', 'approverEmployee']);
 
         return response()->json([
@@ -148,6 +161,8 @@ class ObjectiveController extends Controller
             'tracking_type' => 'in:daily,weekly,monthly,quarterly',
             'tracker' => 'integer|exists:employee,id',
             'approver' => 'integer|exists:employee,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after:start_date',
         ]);
 
         if ($validator->fails()) {
@@ -173,7 +188,6 @@ class ObjectiveController extends Controller
         }
 
         $objective->update($request->all());
-
         $objective->load(['okr', 'trackerEmployee', 'approverEmployee']);
 
         return response()->json([

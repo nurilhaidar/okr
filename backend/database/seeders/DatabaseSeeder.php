@@ -17,19 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
-            OrgUnitTypeSeeder::class,
-            OrgUnitRoleSeeder::class,
-            DelegationTypeSeeder::class,
-            OrgUnitSeeder::class,
             EmployeeSeeder::class,
-            OrgUnitEmployeeSeeder::class,
-            OkrTypeSeeder::class,
-            OKRSeeder::class,
-            ObjectiveSeeder::class,
-            DelegationSeeder::class,
-            DelegationTargetSeeder::class,
-            CheckInSeeder::class,
-            ApprovalLogSeeder::class,
         ]);
     }
 }

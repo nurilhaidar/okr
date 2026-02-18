@@ -20,8 +20,11 @@
         <div class="col-12 col-lg-12 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="mb-3">Pending Check-in Approvals</h4>
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Pending Check-in Approvals</h4>
+                            <p class="text-muted mb-0">Review and approve or reject pending check-ins.</p>
+                        </div>
                         <a href="{{ route('admin.check-ins.index') }}" class="btn btn-outline-primary">
                             <i class="ti ti-list me-2"></i>All Check-ins
                         </a>

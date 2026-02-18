@@ -3,17 +3,27 @@
 @section('title', 'Roles - OKR Management System')
 
 @section('content')
-    <div class="row">
-        <div class="col-12 col-lg-12 mb-4">
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Roles</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Filters Card with Header -->
+    <div class="row mb-4">
+        <div class="col-12">
             <div class="card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-1">Roles</h4>
-                            <p class="text-muted mb-0">Manage user roles and permissions.</p>
-                        </div>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-                            <i class="ti ti-plus me-2"></i>Add Role
+                        <h4 class="mb-0">Roles</h4>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                            <i class="ti ti-plus me-1"></i>Add Role
                         </button>
                     </div>
                 </div>
@@ -27,37 +37,14 @@
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover dt-responsive" id="rolesTable">
+                        <table id="rolesTable" class="table table-hover" style="width: 100%">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
                                     <th>Name</th>
                                     <th>Employees Count</th>
-                                    <th>Created At</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach ($roles as $role)
-                                    <tr data-id="{{ $role->id }}" data-name="{{ $role->name }}"
-                                        data-employees-count="{{ $role->employees()->count() }}">
-                                        <td>{{ $role->id }}</td>
-                                        <td>
-                                            <span class="badge bg-label-primary">{{ $role->name }}</span>
-                                        </td>
-                                        <td>{{ $role->employees()->count() }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($role->created_at)->format('M d, Y') }}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-icon btn-outline-primary btn-edit" title="Edit">
-                                                <i class="ti ti-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-icon btn-outline-danger btn-delete ms-1" title="Delete">
-                                                <i class="ti ti-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -73,7 +60,7 @@
                     <h5 class="modal-title">Add New Role</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="{{ route('admin.roles.store') }}">
+                <form method="POST" action="{{ route('admin.roles.store') }}" id="addRoleForm">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
@@ -128,78 +115,160 @@
 @endsection
 
 @section('page_scripts')
-    <!-- Vendors JS -->
     <script src="{{ asset('plugin/vuexy/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js') }}"></script>
     <script src="{{ asset('plugin/vuexy/assets/js/tables-datatables-advanced.js') }}"></script>
     <script>
+        let dataTable;
+
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize DataTable
-            const rolesTable = $('#rolesTable').DataTable({
+            dataTable = $('#rolesTable').DataTable({
+                processing: true,
+                serverSide: true,
                 responsive: true,
-                pageLength: 10,
-                lengthMenu: [
-                    [10, 25, 50, -1],
-                    [10, 25, 50, 'All']
+                ajax: {
+                    url: '{{ route('admin.roles.data') }}',
+                    type: 'GET',
+                },
+                columns: [
+                    {
+                        data: 'name',
+                        render: function(data) {
+                            return `<span class="badge bg-label-primary">${data}</span>`;
+                        }
+                    },
+                    {
+                        data: 'employees_count'
+                    },
+                    {
+                        data: 'id',
+                        render: function(data, type, row) {
+                            return `
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editRole(${data}, '${row.name}')">
+                                        <i class="ti ti-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteRole(${data})">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                ],
+                order: [
+                    [0, 'asc']
                 ],
                 language: {
                     search: '_INPUT_',
-                    searchPlaceholder: 'Search roles...',
-                    paginate: {
-                        next: '<i class="ti ti-chevron-right"></i>',
-                        previous: '<i class="ti ti-chevron-left"></i>'
-                    }
+                    searchPlaceholder: 'Search',
+                    lengthMenu: 'Show _MENU_',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ roles',
+                    infoEmpty: 'No roles found',
+                    infoFiltered: '(filtered from _MAX_ total roles)',
                 },
-                columnDefs: [{
-                    orderable: false,
-                    targets: [4]
-                }],
-                order: [
-                    [0, 'desc']
-                ]
+                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                    '<"row"<"col-sm-12"tr>>' +
+                    '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
             });
 
-            // Edit button click handler
-            $(document).on('click', '.btn-edit', function() {
-                const row = $(this).closest('tr');
-                const id = row.data('id');
-                const name = row.data('name');
+            // Custom length menu with Bootstrap styling
+            $('div.dataTables_length select').addClass('form-select form-select-sm');
+            $('div.dataTables_filter input').addClass('form-control form-control-sm');
 
+            // Handle add role form submit with AJAX
+            document.getElementById('addRoleForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const form = this;
+                const formData = new FormData(form);
+
+                fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Success', data.message, 'success');
+                            bootstrap.Modal.getInstance(document.getElementById('addRoleModal')).hide();
+                            form.reset();
+                            dataTable.ajax.reload();
+                        } else {
+                            showToast('Error', data.message || 'Failed to create role', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showToast('Error', 'Failed to create role', 'error');
+                    });
+            });
+
+            // Handle edit role form submit with AJAX
+            document.getElementById('editRoleForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const form = this;
+                const formData = new FormData(form);
+
+                fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Success', data.message, 'success');
+                            bootstrap.Modal.getInstance(document.getElementById('editRoleModal')).hide();
+                            dataTable.ajax.reload();
+                        } else {
+                            showToast('Error', data.message || 'Failed to update role', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showToast('Error', 'Failed to update role', 'error');
+                    });
+            });
+
+            // Edit role function
+            window.editRole = function(id, name) {
                 document.getElementById('editRoleId').value = id;
                 document.getElementById('editRoleName').value = name;
                 document.getElementById('editRoleForm').action = '/admin/roles/' + id;
 
                 const modal = new bootstrap.Modal(document.getElementById('editRoleModal'));
                 modal.show();
-            });
+            };
 
-            // Delete button click handler
-            $(document).on('click', '.btn-delete', function() {
-                const row = $(this).closest('tr');
-                const id = row.data('id');
-                const name = row.data('name');
-
-                if (confirm(`Are you sure you want to delete the role "${name}"?`)) {
-                    // Create and submit form dynamically
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/admin/roles/' + id;
-
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = '_token';
-                    csrfInput.value = '{{ csrf_token() }}';
-
-                    const methodInput = document.createElement('input');
-                    methodInput.type = 'hidden';
-                    methodInput.name = '_method';
-                    methodInput.value = 'DELETE';
-
-                    form.appendChild(csrfInput);
-                    form.appendChild(methodInput);
-                    document.body.appendChild(form);
-                    form.submit();
+            // Delete role function
+            window.deleteRole = function(id) {
+                if (confirm('Are you sure you want to delete this role?')) {
+                    fetch(`/admin/roles/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Success', data.message, 'success');
+                                dataTable.ajax.reload();
+                            } else {
+                                showToast('Error', data.message || 'Failed to delete role', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error', 'Failed to delete role', 'error');
+                        });
                 }
-            });
+            };
 
             // Display toastr notifications for CRUD operations
             @if (session('success'))

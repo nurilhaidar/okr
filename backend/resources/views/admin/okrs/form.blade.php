@@ -56,10 +56,11 @@
             <div class="row g-3 mt-1">
                 <div class="col-md-4">
                     <label class="form-label">OKR Type <span class="text-danger">*</span></label>
-                    <select name="okr_type_id" class="form-select" required>
+                    <select name="okr_type_id" id="okr_type_id" class="form-select" required
+                        onchange="updateOwnerFields()">
                         <option value="">Select Type</option>
                         @foreach ($okrTypes as $type)
-                            <option value="{{ $type->id }}"
+                            <option value="{{ $type->id }}" data-is-employee="{{ $type->is_employee ? '1' : '0' }}"
                                 {{ old('okr_type_id', $isEdit ? $okr->okr_type_id : '') == $type->id ? 'selected' : '' }}>
                                 {{ $type->name }}
                             </option>
@@ -79,48 +80,50 @@
             </div>
 
             <div class="row g-3 mt-1">
-                <div class="col-md-4">
-                    <label class="form-label">Owner Type <span class="text-danger">*</span></label>
-                    <select name="owner_type" id="owner_type" class="form-select" required
-                        onchange="updateOwnerDropdown()">
-                        <option value="">Select Owner Type</option>
-                        <option value="employee"
-                            {{ old('owner_type', $isEdit && $okr->owner_type === 'App\Models\Employee' ? 'employee' : '') == 'employee' ? 'selected' : '' }}>
-                            Employee</option>
-                        <option value="orgunit"
-                            {{ old('owner_type', $isEdit && $okr->owner_type === 'App\Models\OrgUnit' ? 'orgunit' : '') == 'orgunit' ? 'selected' : '' }}>
-                            Organization Unit</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Owner <span class="text-danger">*</span></label>
-                    <select name="owner_id" id="owner_id" class="form-select" required>
-                        <option value="">Select Owner</option>
-                        @if ($isEdit)
-                            @if ($okr->owner_type === 'App\Models\Employee')
-                                @foreach ($employees as $emp)
-                                    <option value="{{ $emp->id }}" data-type="employee"
-                                        {{ old('owner_id', $okr->owner_id) == $emp->id ? 'selected' : '' }}>
-                                        {{ $emp->name }}
-                                    </option>
-                                @endforeach
-                            @else
-                                @foreach ($orgUnits as $unit)
-                                    <option value="{{ $unit->id }}" data-type="orgunit"
-                                        {{ old('owner_id', $okr->owner_id) == $unit->id ? 'selected' : '' }}>
-                                        {{ $unit->name }}
-                                    </option>
-                                @endforeach
-                            @endif
+                <div class="col-md-4" id="employeeOwnerField" style="display: none;">
+                    <label class="form-label">Employee Owner <span class="text-danger">*</span></label>
+                    <select name="employee_id" id="employee_id" class="form-select">
+                        <option value="">Select Employee</option>
+                        @if ($isEdit && $okr->employee_id)
+                            @foreach ($employees as $emp)
+                                <option value="{{ $emp->id }}"
+                                    {{ old('employee_id', $okr->employee_id) == $emp->id ? 'selected' : '' }}>
+                                    {{ $emp->name }}
+                                </option>
+                            @endforeach
+                        @else
+                            @foreach ($employees as $emp)
+                                <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                            @endforeach
                         @endif
                     </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
-                            {{ old('is_active', $isEdit ? $okr->is_active : true) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="is_active">Active</label>
-                    </div>
+
+                <div class="col-md-4" id="orgUnitOwnerField" style="display: none;">
+                    <label class="form-label">Org Unit Owner <span class="text-danger">*</span></label>
+                    <select name="orgunit_id" id="orgunit_id" class="form-select">
+                        <option value="">Select Organization Unit</option>
+                        @if ($isEdit && $okr->orgunit_id)
+                            @foreach ($orgUnits as $unit)
+                                <option value="{{ $unit->id }}"
+                                    {{ old('orgunit_id', $okr->orgunit_id) == $unit->id ? 'selected' : '' }}>
+                                    {{ $unit->name }}
+                                </option>
+                            @endforeach
+                        @else
+                            @foreach ($orgUnits as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Status <span class="text-danger">*</span></label>
+                    <select name="is_active" id="is_active" class="form-select" required>
+                        <option value="1" {{ $isEdit ? ($okr->is_active ? 'selected' : '') : 'selected' }}>Active</option>
+                        <option value="0" {{ $isEdit && !$okr->is_active ? 'selected' : '' }}>Inactive</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -135,376 +138,319 @@
             </button>
         </div>
         <div class="card-body">
-            <div class="alert alert-info mb-3">
-                <i class="ti ti-info-circle me-2"></i>
-                Total weight of all objectives should equal 100%. Current total: <strong id="totalWeight">0%</strong>
-            </div>
-
             <div id="objectivesContainer">
                 @if ($isEdit && $okr->objectives->count() > 0)
-                    @foreach ($okr->objectives as $objective)
-                        <div class="objective-item" id="objective-{{ $loop->index }}">
+                    @foreach ($okr->objectives as $index => $objective)
+                        <div class="objective-item" data-index="{{ $index }}">
                             <div class="objective-header">
-                                <span class="objective-title">Objective {{ $loop->iteration }}</span>
-                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                    onclick="removeObjective({{ $loop->index }})">
+                                <span class="objective-title">Objective #{{ $index + 1 }}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeObjective(this)">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
-                            <input type="hidden" name="objectives[{{ $loop->index }}][id]"
-                                value="{{ $objective->id }}">
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label">Description <span class="text-danger">*</span></label>
-                                    <textarea name="objectives[{{ $loop->index }}][description]" class="form-control" rows="2" required>{{ $objective->description }}</textarea>
+                                    <textarea name="objectives[{{ $index }}][description]" class="form-control" rows="2"
+                                        required>{{ old('objectives.' . $index . '.description', $objective->description) }}</textarea>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Weight <span class="text-danger">*</span></label>
-                                    <input type="number" name="objectives[{{ $loop->index }}][weight]"
-                                        class="form-control objective-weight" step="0.01" min="0"
-                                        max="100" value="{{ $objective->weight * 100 }}" required
-                                        onchange="updateTotalWeight()">
+                                <div class="col-md-4">
+                                    <label class="form-label">Weight (%) <span class="text-danger">*</span></label>
+                                    <input type="number" name="objectives[{{ $index }}][weight]" class="form-control"
+                                        step="0.01" min="0" max="100" value="{{ old('objectives.' . $index . '.weight', $objective->weight * 100) }}" required>
+                                    <small class="text-muted">Enter percentage (0-100%)</small>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label class="form-label">Target Type <span class="text-danger">*</span></label>
-                                    <select name="objectives[{{ $loop->index }}][target_type]" class="form-select"
-                                        required onchange="toggleTargetValue({{ $loop->index }})">
-                                        <option value="numeric"
-                                            {{ $objective->target_type === 'numeric' ? 'selected' : '' }}>Numeric
-                                        </option>
-                                        <option value="binary"
-                                            {{ $objective->target_type === 'binary' ? 'selected' : '' }}>Binary
-                                        </option>
+                                    <select name="objectives[{{ $index }}][target_type]" class="form-select" required
+                                        onchange="updateTargetValueField(this, {{ $index }})">
+                                        <option value="">Select Type</option>
+                                        <option value="numeric" {{ old('objectives.' . $index . '.target_type', $objective->target_type) == 'numeric' ? 'selected' : '' }}>Numeric</option>
+                                        <option value="binary" {{ old('objectives.' . $index . '.target_type', $objective->target_type) == 'binary' ? 'selected' : '' }}>Binary</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label class="form-label">Target Value <span class="text-danger">*</span></label>
-                                    <input type="number" name="objectives[{{ $loop->index }}][target_value]"
-                                        class="form-control" step="any" value="{{ $objective->target_value }}"
-                                        required>
+                                    <input type="number" name="objectives[{{ $index }}][target_value]" class="form-control"
+                                        step="0.01" value="{{ old('objectives.' . $index . '.target_value', $objective->target_value) }}" required>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label class="form-label">Deadline <span class="text-danger">*</span></label>
-                                    <input type="date" name="objectives[{{ $loop->index }}][deadline]"
-                                        class="form-control"
-                                        value="{{ $objective->deadline ? $objective->deadline->format('Y-m-d') : '' }}"
-                                        required>
+                                    <input type="date" name="objectives[{{ $index }}][deadline]" class="form-control"
+                                        value="{{ old('objectives.' . $index . '.deadline', $objective->deadline ? $objective->deadline->format('Y-m-d') : '') }}" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Tracking Type <span class="text-danger">*</span></label>
-                                    <select name="objectives[{{ $loop->index }}][tracking_type]" class="form-select"
-                                        required>
-                                        <option value="daily"
-                                            {{ $objective->tracking_type === 'daily' ? 'selected' : '' }}>Daily
-                                        </option>
-                                        <option value="weekly"
-                                            {{ $objective->tracking_type === 'weekly' ? 'selected' : '' }}>Weekly
-                                        </option>
-                                        <option value="monthly"
-                                            {{ $objective->tracking_type === 'monthly' ? 'selected' : '' }}>Monthly
-                                        </option>
-                                        <option value="quarterly"
-                                            {{ $objective->tracking_type === 'quarterly' ? 'selected' : '' }}>Quarterly
-                                        </option>
+                                    <select name="objectives[{{ $index }}][tracking_type]" class="form-select" required>
+                                        <option value="">Select Type</option>
+                                        <option value="daily" {{ old('objectives.' . $index . '.tracking_type', $objective->tracking_type) == 'daily' ? 'selected' : '' }}>Daily</option>
+                                        <option value="weekly" {{ old('objectives.' . $index . '.tracking_type', $objective->tracking_type) == 'weekly' ? 'selected' : '' }}>Weekly</option>
+                                        <option value="monthly" {{ old('objectives.' . $index . '.tracking_type', $objective->tracking_type) == 'monthly' ? 'selected' : '' }}>Monthly</option>
+                                        <option value="quarterly" {{ old('objectives.' . $index . '.tracking_type', $objective->tracking_type) == 'quarterly' ? 'selected' : '' }}>Quarterly</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Tracker</label>
-                                    <select name="objectives[{{ $loop->index }}][tracker]" class="form-select">
-                                        <option value="">Select Tracker</option>
+                                    <select name="objectives[{{ $index }}][tracker]" class="form-select select2">
+                                        <option value="">Select Tracker (Optional)</option>
                                         @foreach ($employees as $emp)
-                                            <option value="{{ $emp->id }}"
-                                                {{ $objective->tracker == $emp->id ? 'selected' : '' }}>
-                                                {{ $emp->name }}</option>
+                                            <option value="{{ $emp->id }}" {{ old('objectives.' . $index . '.tracker', $objective->tracker) == $emp->id ? 'selected' : '' }}>
+                                                {{ $emp->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Approver</label>
-                                    <select name="objectives[{{ $loop->index }}][approver]" class="form-select">
-                                        <option value="">Select Approver</option>
+                                    <select name="objectives[{{ $index }}][approver]" class="form-select select2">
+                                        <option value="">Select Approver (Optional)</option>
                                         @foreach ($employees as $emp)
-                                            <option value="{{ $emp->id }}"
-                                                {{ $objective->approver == $emp->id ? 'selected' : '' }}>
-                                                {{ $emp->name }}</option>
+                                            <option value="{{ $emp->id }}" {{ old('objectives.' . $index . '.approver', $objective->approver) == $emp->id ? 'selected' : '' }}>
+                                                {{ $emp->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
+                                @if ($isEdit)
+                                    <input type="hidden" name="objectives[{{ $index }}][id]" value="{{ $objective->id }}">
+                                @endif
                             </div>
                         </div>
                     @endforeach
                 @endif
             </div>
+            @if (!$isEdit || $okr->objectives->count() === 0)
+                <div class="text-center py-4 text-muted" id="noObjectivesMessage">
+                    <i class="ti ti-target-off" style="font-size: 40px;"></i>
+                    <p class="mb-0 mt-2">No objectives added yet. Click "Add Objective" to create one.</p>
+                </div>
+            @endif
         </div>
     </div>
 
     <!-- Form Actions -->
     <div class="d-flex justify-content-between">
-        <a href="{{ route('admin.okrs') }}" class="btn btn-label-secondary">Cancel</a>
-        <button type="submit" class="btn btn-primary" id="submitBtn">
-            <i class="ti ti-check me-2"></i>{{ $isEdit ? 'Update OKR' : 'Create OKR' }}
+        <a href="{{ route('admin.okrs') }}" class="btn btn-outline-secondary">
+            <i class="ti ti-arrow-left me-2"></i>Back to OKRs
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="ti ti-device-floppy me-2"></i>{{ $isEdit ? 'Update OKR' : 'Create OKR' }}
         </button>
     </div>
 </form>
 
 @push('scripts')
     <script>
-        let objectiveCount = {{ $isEdit ? $okr->objectives->count() : 0 }};
-
-        const employees = @json($employees);
-        const orgUnits = @json($orgUnits);
+        let objectiveIndex = {{ $isEdit ? $okr->objectives->count() : 0 }};
 
         document.addEventListener('DOMContentLoaded', function() {
-            updateOwnerDropdown();
-            updateTotalWeight();
-
-            // Handle form submission via AJAX
-            document.getElementById('okrForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                submitForm();
+            // Initialize Select2
+            $('.select2').select2({
+                dropdownParent: $('#okrForm'),
+                width: '100%'
             });
 
-        });
+            // Initialize owner fields based on OKR type
+            updateOwnerFields();
 
-        function submitForm() {
-            const form = document.getElementById('okrForm');
-            const formData = new FormData(form);
-            const submitBtn = document.getElementById('submitBtn');
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="ti ti-loader me-2"></i>Saving...';
-
-            // Collect objectives
-            const objectives = [];
-            document.querySelectorAll('.objective-item').forEach(item => {
-                const id = item.id.replace('objective-', '');
-                const description = formData.get(`objectives[${id}][description]`);
-                if (description) {
-                    objectives.push({
-                        id: formData.get(`objectives[${id}][id]`) || null,
-                        description: description,
-                        weight: formData.get(`objectives[${id}][weight]`),
-                        target_type: formData.get(`objectives[${id}][target_type]`),
-                        target_value: formData.get(`objectives[${id}][target_value]`),
-                        deadline: formData.get(`objectives[${id}][deadline]`),
-                        tracking_type: formData.get(`objectives[${id}][tracking_type]`),
-                        tracker: formData.get(`objectives[${id}][tracker]`),
-                        approver: formData.get(`objectives[${id}][approver]`),
-                    });
-                }
-            });
-
-            // Build request data
-            const data = {
-                name: formData.get('name'),
-                weight: formData.get('weight'),
-                okr_type_id: formData.get('okr_type_id'),
-                start_date: formData.get('start_date'),
-                end_date: formData.get('end_date'),
-                owner_type: formData.get('owner_type'),
-                owner_id: formData.get('owner_id'),
-                is_active: formData.get('is_active') === 'on',
-                objectives: objectives
-            };
-
-            const url = form.action;
-            const method = form.querySelector('input[name="_method"]')?.value || 'POST';
-
-            fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': formData.get('_token')
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(async res => {
-                    // Always parse JSON response
-                    const contentType = res.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Server returned non-JSON response');
-                    }
-
-                    const data = await res.json();
-                    // Return both data and status for handling
-                    return { data, status: res.status };
-                })
-                .then(({ data: response, status }) => {
-                    if (response.success) {
-                        // Store success message in localStorage to show on index page
-                        localStorage.setItem('toast_success', response.message || 'OKR saved successfully!');
-                        window.location.href = '{{ route('admin.okrs') }}';
-                    } else if (response.errors) {
-                        // Show validation errors
-                        const errorMessages = Object.values(response.errors).flat();
-                        errorMessages.forEach(msg => {
-                            showToast('Validation Error', msg, 'error');
-                        });
-                    } else {
-                        showToast('Error', response.message || 'An error occurred while saving the OKR.', 'error');
-                    }
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    const errorMsg = err.message || 'An error occurred while saving the OKR.';
-                    showToast('Error', errorMsg, 'error');
-                })
-                .finally(() => {
-                    // Re-enable submit button
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML =
-                        '<i class="ti ti-check me-2"></i>{{ $isEdit ? 'Update OKR' : 'Create OKR' }}';
-                });
-        }
-
-        function updateOwnerDropdown() {
-            const ownerType = document.getElementById('owner_type').value;
-            const ownerSelect = document.getElementById('owner_id');
-
-            // Clear existing options
-            ownerSelect.innerHTML = '<option value="">Select Owner</option>';
-
-            if (ownerType === 'employee') {
-                employees.forEach(emp => {
-                    const option = document.createElement('option');
-                    option.value = emp.id;
-                    option.textContent = emp.name;
-                    option.dataset.type = 'employee';
-                    ownerSelect.appendChild(option);
-                });
-            } else if (ownerType === 'orgunit') {
-                orgUnits.forEach(unit => {
-                    const option = document.createElement('option');
-                    option.value = unit.id;
-                    option.textContent = unit.name;
-                    option.dataset.type = 'orgunit';
-                    ownerSelect.appendChild(option);
-                });
+            // Show success message if exists
+            const successMessage = localStorage.getItem('toast_success');
+            if (successMessage) {
+                showToast('Success', successMessage, 'success');
+                localStorage.removeItem('toast_success');
             }
 
-            // Preserve selected value if it matches the current type
-            @if ($isEdit)
-                const currentOwnerId = '{{ $okr->owner_id }}';
-                const currentOwnerType = '{{ $okr->owner_type === 'App\Models\Employee' ? 'employee' : 'orgunit' }}';
-                if (ownerType === currentOwnerType) {
-                    ownerSelect.value = currentOwnerId;
+            // Show error message if exists
+            const errorMessage = localStorage.getItem('toast_error');
+            if (errorMessage) {
+                showToast('Error', errorMessage, 'error');
+                localStorage.removeItem('toast_error');
+            }
+        });
+
+        function updateOwnerFields() {
+            const okrTypeId = document.getElementById('okr_type_id').value;
+            const employeeField = document.getElementById('employeeOwnerField');
+            const orgUnitField = document.getElementById('orgUnitOwnerField');
+            const employeeSelect = document.getElementById('employee_id');
+            const orgUnitSelect = document.getElementById('orgunit_id');
+
+            // Reset both fields
+            employeeField.style.display = 'none';
+            orgUnitField.style.display = 'none';
+            employeeSelect.removeAttribute('required');
+            orgUnitSelect.removeAttribute('required');
+
+            if (okrTypeId) {
+                const selectedOption = document.querySelector(`#okr_type_id option[value="${okrTypeId}"]`);
+                const isEmployee = selectedOption.getAttribute('data-is-employee') === '1';
+
+                if (isEmployee) {
+                    employeeField.style.display = 'block';
+                    employeeSelect.setAttribute('required', 'required');
+                } else {
+                    orgUnitField.style.display = 'block';
+                    orgUnitSelect.setAttribute('required', 'required');
                 }
-            @endif
+            }
         }
 
         function addObjective() {
             const container = document.getElementById('objectivesContainer');
-            const objectiveNumber = container.children.length + 1;
+            const noObjectivesMsg = document.getElementById('noObjectivesMessage');
+            if (noObjectivesMsg) {
+                noObjectivesMsg.remove();
+            }
 
             const objectiveHtml = `
-        <div class="objective-item" id="objective-${objectiveCount}">
-          <div class="objective-header">
-            <span class="objective-title">Objective ${objectiveNumber}</span>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeObjective(${objectiveCount})">
-              <i class="ti ti-trash"></i>
-            </button>
-          </div>
-          <div class="row g-3">
-            <div class="col-md-12">
-              <label class="form-label">Description <span class="text-danger">*</span></label>
-              <textarea name="objectives[${objectiveCount}][description]" class="form-control" rows="2" required></textarea>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Weight <span class="text-danger">*</span></label>
-              <input type="number" name="objectives[${objectiveCount}][weight]" class="form-control objective-weight" step="0.01" min="0" max="100" value="10" required onchange="updateTotalWeight()">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Target Type <span class="text-danger">*</span></label>
-              <select name="objectives[${objectiveCount}][target_type]" class="form-select" required onchange="toggleTargetValue(${objectiveCount})">
-                <option value="numeric">Numeric</option>
-                <option value="binary">Binary</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Target Value <span class="text-danger">*</span></label>
-              <input type="number" name="objectives[${objectiveCount}][target_value]" class="form-control" step="any" value="100" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Deadline <span class="text-danger">*</span></label>
-              <input type="date" name="objectives[${objectiveCount}][deadline]" class="form-control" required>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Tracking Type <span class="text-danger">*</span></label>
-              <select name="objectives[${objectiveCount}][tracking_type]" class="form-select" required>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Tracker</label>
-              <select name="objectives[${objectiveCount}][tracker]" class="form-select">
-                <option value="">Select Tracker</option>
-                ${employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Approver</label>
-              <select name="objectives[${objectiveCount}][approver]" class="form-select">
-                <option value="">Select Approver</option>
-                ${employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('')}
-              </select>
-            </div>
-          </div>
-        </div>
-      `;
+                <div class="objective-item" data-index="${objectiveIndex}">
+                    <div class="objective-header">
+                        <span class="objective-title">Objective #${objectiveIndex + 1}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeObjective(this)">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea name="objectives[${objectiveIndex}][description]" class="form-control" rows="2" required></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Weight (%) <span class="text-danger">*</span></label>
+                            <input type="number" name="objectives[${objectiveIndex}][weight]" class="form-control" step="0.01" min="0" max="100" value="100" required>
+                            <small class="text-muted">Enter percentage (0-100%)</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Target Type <span class="text-danger">*</span></label>
+                            <select name="objectives[${objectiveIndex}][target_type]" class="form-select" required onchange="updateTargetValueField(this, ${objectiveIndex})">
+                                <option value="">Select Type</option>
+                                <option value="numeric">Numeric</option>
+                                <option value="binary">Binary</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Target Value <span class="text-danger">*</span></label>
+                            <input type="number" name="objectives[${objectiveIndex}][target_value]" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Deadline <span class="text-danger">*</span></label>
+                            <input type="date" name="objectives[${objectiveIndex}][deadline]" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tracking Type <span class="text-danger">*</span></label>
+                            <select name="objectives[${objectiveIndex}][tracking_type]" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tracker</label>
+                            <select name="objectives[${objectiveIndex}][tracker]" class="form-select select2">
+                                <option value="">Select Tracker (Optional)</option>
+                                @foreach ($employees as $emp)
+                                    <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Approver</label>
+                            <select name="objectives[${objectiveIndex}][approver]" class="form-select select2">
+                                <option value="">Select Approver (Optional)</option>
+                                @foreach ($employees as $emp)
+                                    <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
 
             container.insertAdjacentHTML('beforeend', objectiveHtml);
-            objectiveCount++;
-            updateTotalWeight();
+
+            // Reinitialize Select2 for new elements
+            const newSelects = container.querySelectorAll('.objective-item:last-child .select2');
+            newSelects.forEach(select => {
+                $(select).select2({
+                    dropdownParent: $('#okrForm'),
+                    width: '100%'
+                });
+            });
+
+            objectiveIndex++;
         }
 
-        function removeObjective(id) {
-            const element = document.getElementById('objective-' + id);
-            if (element) {
-                element.remove();
-                renumberObjectives();
-                updateTotalWeight();
-            }
-        }
+        function removeObjective(button) {
+            const objectiveItem = button.closest('.objective-item');
+            objectiveItem.remove();
 
-        function renumberObjectives() {
+            // Check if no objectives left
             const container = document.getElementById('objectivesContainer');
-            const objectives = container.querySelectorAll('.objective-item');
-            objectives.forEach((obj, index) => {
-                const title = obj.querySelector('.objective-title');
-                if (title) {
-                    title.textContent = 'Objective ' + (index + 1);
-                }
-            });
-        }
-
-        function updateTotalWeight() {
-            const weights = document.querySelectorAll('.objective-weight');
-            let total = 0;
-            weights.forEach(input => {
-                total += parseFloat(input.value) || 0;
-            });
-            const totalEl = document.getElementById('totalWeight');
-            if (totalEl) {
-                totalEl.textContent = total.toFixed(2) + '%';
-
-                // Update color based on total
-                if (Math.abs(total - 100) < 0.01) {
-                    totalEl.className = 'text-success';
-                } else if (total > 100) {
-                    totalEl.className = 'text-danger';
-                } else {
-                    totalEl.className = 'text-warning';
-                }
+            if (container.querySelectorAll('.objective-item').length === 0) {
+                container.insertAdjacentHTML('afterbegin', `
+                    <div class="text-center py-4 text-muted" id="noObjectivesMessage">
+                        <i class="ti ti-target-off" style="font-size: 40px;"></i>
+                        <p class="mb-0 mt-2">No objectives added yet. Click "Add Objective" to create one.</p>
+                    </div>
+                `);
             }
         }
 
-        function toggleTargetValue(id) {
-            // Could add logic here to handle binary vs numeric target values
+        function updateTargetValueField(select, index) {
+            const targetValueInput = document.querySelector(`.objective-item[data-index="${index}"] input[name="objectives[${index}][target_value]"]`);
+            if (select.value === 'binary') {
+                targetValueInput.setAttribute('step', '1');
+                targetValueInput.setAttribute('min', '0');
+                targetValueInput.setAttribute('max', '1');
+                targetValueInput.placeholder = '0 or 1';
+            } else {
+                targetValueInput.setAttribute('step', '0.01');
+                targetValueInput.removeAttribute('min');
+                targetValueInput.removeAttribute('max');
+                targetValueInput.placeholder = 'Enter target value';
+            }
         }
+
+        // Form submission handler
+        document.getElementById('okrForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const form = this;
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="ti ti-loader me-2"></i>Saving...';
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.message) {
+                    localStorage.setItem('toast_success', data.message || 'OKR saved successfully');
+                    window.location.href = '{{ route("admin.okrs") }}';
+                } else if (data.errors) {
+                    localStorage.setItem('toast_error', Object.values(data.errors).flat().join('\n'));
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                localStorage.setItem('toast_error', 'An error occurred while saving the OKR');
+                window.location.reload();
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
     </script>
 @endpush

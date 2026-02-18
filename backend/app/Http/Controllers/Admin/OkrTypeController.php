@@ -14,7 +14,17 @@ class OkrTypeController extends Controller
     public function index()
     {
         $okrTypes = OkrType::withCount('okrs')->get();
-        return view('admin.okr-types.index', compact('okrTypes'));
+        $employees = \App\Models\Employee::active()->get(['id', 'name']);
+        $orgUnits = \App\Models\OrgUnit::active()->get(['id', 'name']);
+        return view('admin.okr-types.index', compact('okrTypes', 'employees', 'orgUnits'));
+    }
+
+    /**
+     * Show the form for creating a new OKR type.
+     */
+    public function create()
+    {
+        return view('admin.okr-types.create');
     }
 
     /**
@@ -24,12 +34,13 @@ class OkrTypeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:okr_type',
-            'is_employee' => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         OkrType::create([
             'name' => $request->name,
-            'is_employee' => $request->has('is_employee'),
+            'is_employee' => $request->boolean('is_employee'),
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         return redirect()
@@ -52,12 +63,13 @@ class OkrTypeController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255|unique:okr_type,name,' . $id,
-            'is_employee' => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $okrType->update([
             'name' => $request->name,
-            'is_employee' => $request->has('is_employee'),
+            'is_employee' => $request->boolean('is_employee'),
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         return redirect()
@@ -92,6 +104,46 @@ class OkrTypeController extends Controller
     }
 
     /**
+     * Deactivate the specified OKR type.
+     */
+    public function deactivate(Request $request, $id)
+    {
+        $okrType = OkrType::find($id);
+
+        if (!$okrType) {
+            return redirect()
+                ->route('admin.okr-types')
+                ->with('error', 'OKR Type not found.');
+        }
+
+        $okrType->update(['is_active' => false]);
+
+        return redirect()
+            ->route('admin.okr-types')
+            ->with('success', 'OKR Type deactivated successfully.');
+    }
+
+    /**
+     * Activate the specified OKR type.
+     */
+    public function activate(Request $request, $id)
+    {
+        $okrType = OkrType::find($id);
+
+        if (!$okrType) {
+            return redirect()
+                ->route('admin.okr-types')
+                ->with('error', 'OKR Type not found.');
+        }
+
+        $okrType->update(['is_active' => true]);
+
+        return redirect()
+            ->route('admin.okr-types')
+            ->with('success', 'OKR Type activated successfully.');
+    }
+
+    /**
      * Get all OKR types for dropdown.
      */
     public function getAll()
@@ -101,6 +153,7 @@ class OkrTypeController extends Controller
                 'id' => $type->id,
                 'name' => $type->name,
                 'is_employee' => $type->is_employee,
+                'is_active' => $type->is_active ?? true,
             ];
         });
 

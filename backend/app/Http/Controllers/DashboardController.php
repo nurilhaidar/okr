@@ -12,22 +12,21 @@ use App\Models\OrgUnit;
 class DashboardController extends Controller
 {
     /**
-     * Show the employee dashboard.
+     * Show employee dashboard.
      */
     public function index()
     {
         $user = Auth::user();
 
-        // Get user's OKRs where they are the owner
-        $myOkrs = Okr::where('owner_type', Employee::class)
-            ->where('owner_id', $user->id)
+        // Get user's OKRs where they are owner (employee_id = user's id)
+        $myOkrs = Okr::where('employee_id', $user->id)
             ->with('okrType')
             ->orderBy('created_at', 'desc')
             ->get();
 
         $activeOkrs = $myOkrs->where('is_active', true);
 
-        // Get objectives where user is the tracker
+        // Get objectives where user is tracker
         $objectivesToTrack = $user->trackedObjectives()
             ->with('okr')
             ->get();
@@ -47,7 +46,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Show the admin dashboard.
+     * Show admin dashboard.
      */
     public function admin()
     {
@@ -61,14 +60,15 @@ class DashboardController extends Controller
         // Get overall statistics
         $totalEmployees = Employee::count();
         $activeEmployees = Employee::where('is_active', true)->count();
-
         $totalOkrs = Okr::count();
         $activeOkrs = Okr::where('is_active', true)->count();
-
         $totalOrgUnits = OrgUnit::where('is_active', true)->count();
 
+        // Get roles
+        $roles = \App\Models\Role::withCount('employees')->get();
+
         // Get recent OKRs
-        $recentOkrs = Okr::with(['okrType', 'owner'])
+        $recentOkrs = Okr::with(['okrType', 'employee', 'orgUnit'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -89,6 +89,7 @@ class DashboardController extends Controller
             'totalOkrs',
             'activeOkrs',
             'totalOrgUnits',
+            'roles',
             'recentOkrs',
             'pendingApprovals'
         ));

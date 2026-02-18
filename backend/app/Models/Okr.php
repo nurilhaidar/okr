@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Okr extends Model
 {
@@ -20,8 +19,8 @@ class Okr extends Model
         'okr_type_id',
         'start_date',
         'end_date',
-        'owner_type',
-        'owner_id',
+        'employee_id',
+        'orgunit_id',
         'is_active',
     ];
 
@@ -40,9 +39,14 @@ class Okr extends Model
         return $this->belongsTo(OkrType::class, 'okr_type_id');
     }
 
-    public function owner(): MorphTo
+    public function employee(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function orgUnit(): BelongsTo
+    {
+        return $this->belongsTo(OrgUnit::class, 'orgunit_id');
     }
 
     public function objectives(): HasMany
@@ -50,24 +54,34 @@ class Okr extends Model
         return $this->hasMany(Objective::class);
     }
 
+    /**
+     * Get the owner (employee or orgunit) based on which is set
+     */
+    public function getOwnerAttribute()
+    {
+        if ($this->employee_id) {
+            return $this->employee;
+        }
+        return $this->orgUnit;
+    }
+
+    /**
+     * Get the owner type as a string
+     */
+    public function getOwnerTypeAttribute(): ?string
+    {
+        if ($this->employee_id) {
+            return 'employee';
+        }
+        if ($this->orgunit_id) {
+            return 'orgunit';
+        }
+        return null;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
-    }
-
-    public function scopeForEmployee($query, $employeeId)
-    {
-        return $query->where(function ($q) use ($employeeId) {
-            $q->where('owner_type', Employee::class)
-              ->where('owner_id', $employeeId)
-              ->orWhereHas('owner', function ($subQ) use ($employeeId) {
-                  if ($subQ instanceof OrgUnit) {
-                      $subQ->whereHas('employees', function ($empQ) use ($employeeId) {
-                          $empQ->where('employee_id', $employeeId);
-                      });
-                  }
-              });
-        });
     }
 
     /**
@@ -102,7 +116,7 @@ class Okr extends Model
     }
 
     /**
-     * Check if the total weight of all objectives equals 100% (1.0)
+     * Check if total weight of all objectives equals 100% (1.0)
      */
     public function hasValidObjectiveWeights(): bool
     {
@@ -111,7 +125,7 @@ class Okr extends Model
     }
 
     /**
-     * Get the total weight of all objectives
+     * Get total weight of all objectives
      */
     public function getTotalObjectiveWeight(): float
     {
