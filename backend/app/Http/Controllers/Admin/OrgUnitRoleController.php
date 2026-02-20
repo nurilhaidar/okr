@@ -13,7 +13,7 @@ class OrgUnitRoleController extends Controller
      */
     public function index()
     {
-        $orgUnitRoles = OrgUnitRole::withCount('orgUnitEmployees')->get();
+        $orgUnitRoles = OrgUnitRole::withCount('orgUnitEmployees')->orderBy('name')->get();
         return view('admin.org-unit-roles.index', compact('orgUnitRoles'));
     }
 
@@ -96,7 +96,7 @@ class OrgUnitRoleController extends Controller
      */
     public function getAll()
     {
-        $roles = OrgUnitRole::all()->map(function ($role) {
+        $roles = OrgUnitRole::orderBy('name')->get()->map(function ($role) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,

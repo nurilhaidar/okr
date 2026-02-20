@@ -17,7 +17,7 @@
         .objective-item {
             background: #f8f8f8;
             border-radius: 8px;
-            padding: 12px;
+            padding: 16px;
             margin-bottom: 8px;
         }
 
@@ -53,6 +53,48 @@
             border-radius: 0.25rem;
             line-height: 1 !important;
         }
+
+        /* Check-in Modal Styles */
+        .check-in-icon {
+            width: 40px;
+            height: 40px;
+            background: #d1e7dd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .check-in-empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline-item {
+            position: relative;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -24px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            background: #696cff;
+            border-radius: 50%;
+        }
+
+        .timeline-content {
+            background: #f8f8f8;
+            border-radius: 6px;
+            padding: 12px;
+        }
     </style>
 @endpush
 
@@ -71,12 +113,89 @@
 @endphp
 
 @section('content')
-    <!-- Page Header -->
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">
+                        @switch($tab)
+                            @case('my-okrs')
+                                My OKRs
+                                @break
+                            @case('tracking')
+                                Tracking
+                                @break
+                            @case('approving')
+                                Approving
+                                @break
+                            @case('team-okrs')
+                                Team OKRs
+                                @break
+                            @default
+                                My OKRs
+                        @endswitch
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Page Header with Tabs -->
     <div class="row mb-4">
         <div class="col-12 col-lg-12 mb-4">
+            <!-- Navbar pills -->
+            <ul class="nav nav-pills flex-column flex-sm-row mb-4">
+                <li class="nav-item">
+                    <a class="nav-link {{ $tab === 'my-okrs' ? 'active' : '' }}"
+                       href="{{ route('okrs.index', ['tab' => 'my-okrs', 'status' => request('status', 'active')]) }}">
+                        <i class="ti-xs ti ti-user me-1"></i> My OKRs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ $tab === 'tracking' ? 'active' : '' }}"
+                       href="{{ route('okrs.index', ['tab' => 'tracking', 'status' => request('status', 'active')]) }}">
+                        <i class="ti-xs ti ti-chart-line me-1"></i> Tracking
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ $tab === 'approving' ? 'active' : '' }}"
+                       href="{{ route('okrs.index', ['tab' => 'approving', 'status' => request('status', 'active')]) }}">
+                        <i class="ti-xs ti ti-shield-check me-1"></i> Approving
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ $tab === 'team-okrs' ? 'active' : '' }}"
+                       href="{{ route('okrs.index', ['tab' => 'team-okrs', 'status' => request('status', 'active')]) }}">
+                        <i class="ti-xs ti ti-users me-1"></i> Team OKRs
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Search and Actions Card -->
             <div class="card">
                 <div class="card-body">
-                    <h4 class="mb-3">My OKRs</h4>
+                    <!-- Page Title based on tab -->
+                    <h4 class="mb-3">
+                        @switch($tab)
+                            @case('my-okrs')
+                                My OKRs
+                                @break
+                            @case('tracking')
+                                OKRs I'm Tracking
+                                @break
+                            @case('approving')
+                                OKRs I'm Approving
+                                @break
+                            @case('team-okrs')
+                                Team OKRs
+                                @break
+                            @default
+                                All OKRs
+                        @endswitch
+                    </h4>
+
                     <!-- Search and Actions Form -->
                     <form method="GET" action="{{ route('okrs.index') }}" id="searchForm">
                         <div class="row g-3 align-items-end">
@@ -145,14 +264,17 @@
                                                 0
                                             </span>
                                         </button>
-                                        <a href="{{ route('okrs.create') }}" class="btn btn-primary">
-                                            <i class="ti ti-plus me-1"></i>Create OKR
-                                        </a>
+                                        @if($tab === 'my-okrs')
+                                            <a href="{{ route('okrs.create') }}" class="btn btn-primary">
+                                                <i class="ti ti-plus me-1"></i>Create OKR
+                                            </a>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <!-- Preserve filter parameters -->
+                        <input type="hidden" name="tab" value="{{ request('tab', 'my-okrs') }}">
                         @if (request('owner'))
                             <input type="hidden" name="owner" value="{{ request('owner') }}">
                         @endif
@@ -180,14 +302,9 @@
                                 <label class="form-label">Status</label>
                                 <div class="d-flex gap-2 flex-wrap">
                                     <input type="hidden" name="status" id="statusInput"
-                                        value="{{ request('status', '') }}">
+                                        value="{{ request('status', 'active') }}">
                                     <button type="button"
-                                        class="btn status-btn {{ request('status', '') === '' ? 'btn-primary' : 'btn-outline-primary' }}"
-                                        data-value="">
-                                        All
-                                    </button>
-                                    <button type="button"
-                                        class="btn status-btn {{ request('status') === 'active' ? 'btn-success' : 'btn-outline-success' }}"
+                                        class="btn status-btn {{ request('status', 'active') === 'active' ? 'btn-success' : 'btn-outline-success' }}"
                                         data-value="active">
                                         <i class="ti ti-check me-1"></i>Active
                                     </button>
@@ -199,7 +316,8 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Preserve search and owner parameter -->
+                        <!-- Preserve search, owner, and tab parameter -->
+                        <input type="hidden" name="tab" value="{{ request('tab', 'my-okrs') }}">
                         @if (request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
@@ -240,11 +358,16 @@
                                 </thead>
                                 <tbody>
                                     @forelse($okrs as $okr)
-                                        <tr>
+                                        <tr class="okr-row" data-okr-id="{{ $okr->id }}" style="cursor: pointer;">
                                             <td>
-                                                <div class="fw-bold">{{ $okr->name }}</div>
-                                                <small class="text-muted">{{ $okr->objectives->count() }}
-                                                    objectives</small>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="ti ti-chevron-right me-2" id="chevron-{{ $okr->id }}"></i>
+                                                    <div>
+                                                        <div class="fw-bold">{{ $okr->name }}</div>
+                                                        <small class="text-muted">{{ $okr->objectives->count() }}
+                                                            objectives</small>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td>
                                                 <span
@@ -289,30 +412,24 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @php
-                                                    $roleBadge = '';
-                                                    $roleIcon = '';
-                                                    $roleLabel = '';
-                                                    switch ($okr->role) {
-                                                        case 'owner':
-                                                            $roleBadge = 'bg-label-primary';
-                                                            $roleIcon = '<i class="ti ti-user me-1"></i>';
-                                                            $roleLabel = 'Owner';
-                                                            break;
-                                                        case 'tracker':
-                                                            $roleBadge = 'bg-label-info';
-                                                            $roleIcon = '<i class="ti ti-chart-line me-1"></i>';
-                                                            $roleLabel = 'Tracker';
-                                                            break;
-                                                        case 'approver':
-                                                            $roleBadge = 'bg-label-warning';
-                                                            $roleIcon = '<i class="ti ti-shield-check me-1"></i>';
-                                                            $roleLabel = 'Approver';
-                                                            break;
-                                                    }
-                                                @endphp
-                                                <span class="badge {{ $roleBadge }}">{!! $roleIcon !!}
-                                                    {{ $roleLabel }}</span>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @php
+                                                        $roles = $okr->roles ?? [$okr->role];
+                                                        $roleConfig = [
+                                                            'owner' => ['badge' => 'bg-label-primary', 'icon' => 'ti-user', 'label' => 'Owner'],
+                                                            'tracker' => ['badge' => 'bg-label-info', 'icon' => 'ti-chart-line', 'label' => 'Tracker'],
+                                                            'approver' => ['badge' => 'bg-label-warning', 'icon' => 'ti-shield-check', 'label' => 'Approver'],
+                                                            'member' => ['badge' => 'bg-label-secondary', 'icon' => 'ti-users', 'label' => 'Member'],
+                                                        ];
+                                                    @endphp
+                                                    @foreach ($roles as $r)
+                                                        @if (isset($roleConfig[$r]))
+                                                            <span class="badge {{ $roleConfig[$r]['badge'] }}">
+                                                                <i class="ti {{ $roleConfig[$r]['icon'] }} me-1"></i>{{ $roleConfig[$r]['label'] }}
+                                                            </span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-1">
@@ -322,6 +439,83 @@
                                                         <i class="ti ti-pencil"></i>
                                                     </a>
                                                 </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Objectives Row (hidden by default) -->
+                                        <tr class="objectives-row" id="objectives-{{ $okr->id }}"
+                                            style="display: none;">
+                                            <td colspan="8" class="p-3 bg-light">
+                                                <h6 class="mb-3">Objectives</h6>
+                                                @forelse($okr->objectives as $objective)
+                                                    <div class="objective-item">
+                                                        <div class="d-flex justify-content-between mb-2">
+                                                            <div class="flex-grow-1">
+                                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                                    <div class="fw-bold">{{ $objective->description }}</div>
+                                                                    @if ($objective->checkIns && $objective->checkIns->count() > 0)
+                                                                        <span class="badge bg-label-primary rounded-pill">
+                                                                            {{ $objective->checkIns->count() }}
+                                                                            {{ str('check-in')->plural($objective->checkIns->count()) }}
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
+                                                                <small class="text-muted">
+                                                                    Target: {{ $objective->target_value }}
+                                                                    ({{ $objective->target_type }})
+                                                                    |
+                                                                    Deadline:
+                                                                    {{ \Carbon\Carbon::parse($objective->deadline)->format('M d, Y') }}
+                                                                    |
+                                                                    Tracking: {{ ucfirst($objective->tracking_type) }}
+                                                                    @if ($objective->trackerEmployee)
+                                                                        | Tracker: {{ $objective->trackerEmployee->name }}
+                                                                    @endif
+                                                                    @if ($objective->approverEmployee)
+                                                                        | Approver: {{ $objective->approverEmployee->name }}
+                                                                    @endif
+                                                                </small>
+                                                            </div>
+                                                            <div class="text-end ms-3">
+                                                                <div class="small text-muted mb-1">
+                                                                    {{ number_format($objective->weight * 100) }}%</div>
+                                                                <div class="progress okr-progress"
+                                                                    style="width: 100px; height: 6px;">
+                                                                    <div class="progress-bar {{ getProgressColor($objective->progress) }}"
+                                                                        role="progressbar"
+                                                                        style="width: {{ $objective->progress }}%"
+                                                                        aria-valuenow="{{ $objective->progress }}"
+                                                                        aria-valuemin="0" aria-valuemax="100"></div>
+                                                                </div>
+                                                                <div class="small fw-bold">
+                                                                    {{ number_format($objective->progress, 1) }}%</div>
+                                                            </div>
+                                                        </div>
+                                                        <div
+                                                            class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="small text-muted">
+                                                                    {{ $objective->current_value ?? 0 }} /
+                                                                    {{ $objective->target_value }}
+                                                                </span>
+                                                            </div>
+                                                            @if ($okr->is_active && (int)$objective->tracker === (int)auth()->user()->id)
+                                                                <button type="button" class="btn btn-sm btn-success"
+                                                                    onclick="event.stopPropagation(); openCheckInModal({{ $objective->id }}, '{{ $objective->description }}', {{ $objective->target_value }}, '{{ $objective->target_type }}')">
+                                                                    <i class="ti ti-check me-1"></i>Check In
+                                                                </button>
+                                                            @elseif (!$okr->is_active)
+                                                                <button type="button"
+                                                                    class="btn btn-sm btn-outline-secondary" disabled
+                                                                    title="OKR is inactive"
+                                                                    style="opacity: 0.5; cursor: not-allowed;">
+                                                                    <i class="ti ti-check me-1"></i>Check In
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @empty
+                                                    <p class="text-muted">No objectives defined.</p>
+                                                @endforelse
                                             </td>
                                         </tr>
                                     @empty
@@ -341,6 +535,81 @@
                             </a>
                         </div>
                     @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Check-in Modal -->
+    <div class="modal fade check-in-modal" id="checkInModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="d-flex align-items-center">
+                        <div class="check-in-icon me-2">
+                            <i class="ti ti-check text-success"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0">Check In</h5>
+                            <small class="text-muted" id="checkInObjectiveDescription"></small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Check-in Form -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="card-title mb-1">Add New Check-In</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="checkInForm">
+                                <input type="hidden" id="checkInObjectiveId" name="objective_id">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" name="date" id="checkInDate"
+                                            required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Current Value <span class="text-danger">*</span></label>
+                                        <div id="currentValueContainer">
+                                            <!-- Will be populated based on target type -->
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Comments</label>
+                                        <textarea class="form-control" name="comments" id="checkInComments" rows="3"
+                                            placeholder="Add comments about progress..."></textarea>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Evidence File (optional)</label>
+                                        <input type="file" class="form-control" name="evidence_file"
+                                            id="checkInEvidence" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
+                                        <small class="text-muted">Accepted: PDF, DOC, DOCX, JPG, PNG, XLS, XLSX</small>
+                                    </div>
+                                    <div class="col-12 text-end">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="ti ti-check me-1"></i>Add Check-In
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Check-in History -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Check-In History</h6>
+                        </div>
+                        <div class="card-body" id="checkInHistory">
+                            <div class="check-in-empty-state">
+                                <i class="ti ti-clipboard-list" style="font-size: 40px;"></i>
+                                <p class="mb-0 mt-2">No check-ins yet. Add your first check-in above.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -390,22 +659,16 @@
                         const value = b.getAttribute('data-value');
                         if (value === status) {
                             // Remove outline classes and add solid classes
-                            b.classList.remove('btn-outline-primary', 'btn-outline-success',
-                                'btn-outline-secondary');
-                            if (value === '') {
-                                b.classList.add('btn-primary');
-                            } else if (value === 'active') {
+                            b.classList.remove('btn-outline-success', 'btn-outline-secondary');
+                            if (value === 'active') {
                                 b.classList.add('btn-success');
                             } else if (value === 'inactive') {
                                 b.classList.add('btn-secondary');
                             }
                         } else {
                             // Remove solid classes and add outline classes
-                            b.classList.remove('btn-primary', 'btn-success',
-                                'btn-secondary');
-                            if (value === '') {
-                                b.classList.add('btn-outline-primary');
-                            } else if (value === 'active') {
+                            b.classList.remove('btn-success', 'btn-secondary');
+                            if (value === 'active') {
                                 b.classList.add('btn-outline-success');
                             } else if (value === 'inactive') {
                                 b.classList.add('btn-outline-secondary');
@@ -414,18 +677,35 @@
                     });
                 });
             });
+
+            // Toggle objectives on OKR row click
+            document.querySelectorAll('.okr-row').forEach(row => {
+                row.addEventListener('click', function() {
+                    const okrId = this.getAttribute('data-okr-id');
+                    const objectivesRow = document.getElementById('objectives-' + okrId);
+                    const chevron = document.getElementById('chevron-' + okrId);
+                    if (objectivesRow) {
+                        const isHidden = objectivesRow.style.display === 'none';
+                        objectivesRow.style.display = isHidden ? 'table-row' : 'none';
+                        if (chevron) {
+                            chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                            chevron.style.transition = 'transform 0.2s';
+                        }
+                    }
+                });
+            });
         });
 
         // Function to update filter badge count (from URL - on page load)
         function updateFilterBadge() {
             const search = new URLSearchParams(window.location.search).get('search') || '';
             const owner = new URLSearchParams(window.location.search).get('owner') || '';
-            const status = new URLSearchParams(window.location.search).get('status') || '';
+            const status = new URLSearchParams(window.location.search).get('status') || 'active';
 
             let count = 0;
             if (search) count++;
             if (owner) count++;
-            if (status) count++;
+            if (status && status !== 'active') count++;
 
             const badge = document.getElementById('filterBadge');
             if (count > 0) {
@@ -436,13 +716,178 @@
             }
         }
 
-        // Function to clear all filters and reload page
+        // Function to clear all filters and reload page (resets to active)
         function clearSearch() {
             const searchParams = new URLSearchParams(window.location.search);
             searchParams.delete('search');
             searchParams.delete('owner');
-            searchParams.delete('status');
-            window.location.href = window.location.pathname;
+            searchParams.set('status', 'active');
+            // Keep the current tab
+            if (!searchParams.has('tab')) {
+                searchParams.set('tab', 'my-okrs');
+            }
+            window.location.href = window.location.pathname + '?' + searchParams.toString();
+        }
+
+        // CheckIn Modal Variables and Functions
+        let currentObjectiveId = null;
+        let currentTargetValue = 0;
+        let currentTargetType = 'numeric';
+        let checkInModal = null;
+
+        // Initialize checkIn modal when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            checkInModal = new bootstrap.Modal(document.getElementById('checkInModal'));
+
+            // CheckIn form submission handler
+            document.getElementById('checkInForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="ti ti-loader me-2"></i>Saving...';
+                submitBtn.disabled = true;
+
+                try {
+                    const response = await fetch('{{ route('check-ins.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success || (data.message && !data.errors)) {
+                        showToast('Success', data.message || 'Check-in added successfully!', 'success');
+                        checkInModal.hide();
+                        // Reload check-in history
+                        if (currentObjectiveId) {
+                            loadCheckIns(currentObjectiveId);
+                            // Refresh page to show updated progress
+                            setTimeout(() => window.location.reload(), 1000);
+                        }
+                    } else if (data.errors) {
+                        const errorMessages = Object.values(data.errors).flat();
+                        errorMessages.forEach(message => {
+                            showToast('Error', message, 'error');
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error', 'An error occurred while saving the check-in', 'error');
+                } finally {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+
+        function openCheckInModal(objectiveId, description, targetValue, targetType) {
+            currentObjectiveId = objectiveId;
+            currentTargetValue = targetValue;
+            currentTargetType = targetType;
+
+            document.getElementById('checkInObjectiveId').value = objectiveId;
+            document.getElementById('checkInObjectiveDescription').textContent = description;
+
+            // Set default date to today
+            document.getElementById('checkInDate').value = new Date().toISOString().split('T')[0];
+
+            // Configure current value input based on target type
+            const container = document.getElementById('currentValueContainer');
+            if (targetType === 'binary') {
+                container.innerHTML = `
+                    <select class="form-select" name="current_value" required>
+                        <option value="">Select status</option>
+                        <option value="0">Not Done</option>
+                        <option value="1">Done</option>
+                    </select>
+                `;
+            } else {
+                container.innerHTML = `
+                    <input type="number" class="form-control" name="current_value" id="currentValue"
+                        step="0.01" min="0" placeholder="Enter current value" required>
+                `;
+            }
+
+            // Reset form and load check-ins
+            document.getElementById('checkInComments').value = '';
+            document.getElementById('checkInEvidence').value = '';
+            loadCheckIns(objectiveId);
+
+            // Show modal
+            checkInModal.show();
+        }
+
+        async function loadCheckIns(objectiveId) {
+            const historyContainer = document.getElementById('checkInHistory');
+
+            try {
+                const response = await fetch(`{{ route('check-ins.by-objective', ':objectiveId') }}`
+                    .replace(':objectiveId', objectiveId));
+                if (!response.ok) throw new Error('Failed to load check-ins');
+
+                const data = await response.json();
+                const checkIns = data.data || [];
+
+                if (checkIns.length === 0) {
+                    historyContainer.innerHTML = `
+                        <div class="check-in-empty-state text-center py-4">
+                            <i class="ti ti-clipboard-list" style="font-size: 40px;"></i>
+                            <p class="mb-0 mt-2 text-muted">No check-ins yet. Add your first check-in above.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="timeline timeline-simple">';
+                checkIns.forEach(checkIn => {
+                    const statusClass = checkIn.latest_status === 'approved' ? 'bg-label-success' :
+                                       checkIn.latest_status === 'rejected' ? 'bg-label-danger' :
+                                       checkIn.latest_status === 'pending' ? 'bg-label-warning' : 'bg-label-secondary';
+
+                    const statusText = checkIn.latest_status ? checkIn.latest_status.charAt(0).toUpperCase() + checkIn.latest_status.slice(1) : 'Draft';
+
+                    html += `
+                        <div class="timeline-item mb-3">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            ${checkIn.comments ? checkIn.comments.substring(0, 50) + (checkIn.comments.length > 50 ? '...' : '') : 'No comments'}
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="ti ti-calendar me-1"></i>${checkIn.date}
+                                            <span class="mx-2">•</span>
+                                            <i class="ti ti-chart-bar me-1"></i>${checkIn.current_value} / ${targetValue}
+                                        </small>
+                                    </div>
+                                    <span class="badge ${statusClass}">${statusText}</span>
+                                </div>
+                                </div>
+                    `;
+                });
+                html += '</div>';
+                historyContainer.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading check-ins:', error);
+                historyContainer.innerHTML = '<p class="text-danger">Failed to load check-in history.</p>';
+            }
+        }
+
+        function showToast(title, message, type = 'info') {
+            // Check if toastr is available
+            if (typeof toastr !== 'undefined') {
+                toastr[type](message, title);
+            } else {
+                // Fallback to alert
+                alert(`${title}: ${message}`);
+            }
         }
     </script>
 @endsection

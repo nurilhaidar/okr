@@ -115,36 +115,53 @@ class Objective extends Model
     }
 
     /**
-     * Calculate progress percentage based on the latest approved check-in
+     * Calculate progress percentage based on the sum of all approved check-ins
      */
     public function getProgressAttribute(): float
     {
-        $latestCheckIn = $this->latestApprovedCheckIn();
+        // Get all approved check-ins and sum their current_value
+        $totalCurrentValue = $this->checkIns()
+            ->whereHas('approvalLogs', function ($query) {
+                // Find check-ins where the LATEST approval log has status 'approved'
+                $query->whereIn('id', function ($subQuery) {
+                    $subQuery->select(DB::raw('MAX(id)'))
+                        ->from('approval_log')
+                        ->whereColumn('check_in_id', 'check_in.id')
+                        ->groupBy('check_in_id');
+                })
+                ->where('status', 'approved');
+            })
+            ->sum('current_value');
 
-        if (!$latestCheckIn) {
-            return 0.0;
-        }
-
-        $currentValue = $latestCheckIn->current_value;
         $targetValue = $this->target_value;
 
         // Avoid division by zero
         if ($targetValue == 0) {
-            return $currentValue > 0 ? 100.0 : 0.0;
+            return $totalCurrentValue > 0 ? 100.0 : 0.0;
         }
 
-        $progress = ($currentValue / $targetValue) * 100;
+        $progress = ($totalCurrentValue / $targetValue) * 100;
 
         // Cap at 100%
         return min($progress, 100.0);
     }
 
     /**
-     * Get the current value from the latest approved check-in
+     * Get the sum of current values from all approved check-ins
      */
     public function getCurrentValueAttribute(): float
     {
-        $latestCheckIn = $this->latestApprovedCheckIn();
-        return $latestCheckIn ? $latestCheckIn->current_value : 0.0;
+        return $this->checkIns()
+            ->whereHas('approvalLogs', function ($query) {
+                // Find check-ins where the LATEST approval log has status 'approved'
+                $query->whereIn('id', function ($subQuery) {
+                    $subQuery->select(DB::raw('MAX(id)'))
+                        ->from('approval_log')
+                        ->whereColumn('check_in_id', 'check_in.id')
+                        ->groupBy('check_in_id');
+                })
+                ->where('status', 'approved');
+            })
+            ->sum('current_value') ?? 0.0;
     }
 }

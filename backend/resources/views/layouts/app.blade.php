@@ -107,7 +107,8 @@
             <!-- Default Sidebar -->
             <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
                 <div class="app-brand demo">
-                    <a href="{{ auth()->user()->role && auth()->user()->role->name === 'Admin' ? route('admin.dashboard') : route('dashboard') }}" class="app-brand-link">
+                    <a href="{{ auth()->user()->role && auth()->user()->role->name === 'Admin' ? route('admin.dashboard') : route('dashboard') }}"
+                        class="app-brand-link">
                         <span class="app-brand-logo demo">
                             <svg width="32" height="22" viewBox="0 0 32 22" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -138,101 +139,102 @@
                 <ul class="menu-inner py-1">
                     <!-- Dashboard -->
                     <li class="menu-item {{ request()->routeIs('admin.dashboard', 'dashboard') ? 'active' : '' }}">
-                        <a href="{{ auth()->user()->role && auth()->user()->role->name === 'Admin' ? route('admin.dashboard') : route('dashboard') }}" class="menu-link">
+                        <a href="{{ auth()->user()->role && auth()->user()->role->name === 'Admin' ? route('admin.dashboard') : route('dashboard') }}"
+                            class="menu-link">
                             <i class="menu-icon tf-icons ti ti-smart-home"></i>
                             <div data-i18n="Dashboard">Dashboard</div>
                         </a>
                     </li>
 
                     @if (auth()->user()->role && auth()->user()->role->name === 'Admin')
-                    <!-- Employees Management -->
-                    <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">Employee Management</span>
-                    </li>
-                    <!-- Employees -->
-                    <li class="menu-item {{ request()->routeIs('admin.employees*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.employees') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-users"></i>
-                            <div data-i18n="Employees">Employees</div>
-                        </a>
-                    </li>
-                    <!-- Roles -->
-                    <li class="menu-item {{ request()->routeIs('admin.roles*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.roles') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-shield"></i>
-                            <div data-i18n="Roles">Roles</div>
-                        </a>
-                    </li>
+                        <!-- Employees Management -->
+                        <li class="menu-header small text-uppercase">
+                            <span class="menu-header-text">Employee Management</span>
+                        </li>
+                        <!-- Employees -->
+                        <li class="menu-item {{ request()->routeIs('admin.employees*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.employees') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-users"></i>
+                                <div data-i18n="Employees">Employees</div>
+                            </a>
+                        </li>
+                        <!-- Roles -->
+                        <li class="menu-item {{ request()->routeIs('admin.roles*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.roles') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-shield"></i>
+                                <div data-i18n="Roles">Roles</div>
+                            </a>
+                        </li>
 
-                    <!-- OrgUnit Management -->
-                    <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">OrgUnit Management</span>
-                    </li>
+                        <!-- OrgUnit Management -->
+                        <li class="menu-header small text-uppercase">
+                            <span class="menu-header-text">OrgUnit Management</span>
+                        </li>
 
-                    <!-- Organization Units -->
-                    <li class="menu-item {{ request()->routeIs('admin.org-units*') ? 'active open' : '' }}">
-                        <a href="javascript:void(0);" class="menu-link menu-toggle">
-                            <i class="menu-icon tf-icons ti ti-building"></i>
-                            <div data-i18n="Organization Units">Organization Units</div>
-                        </a>
-                        <ul class="menu-sub">
-                            <li class="menu-item {{ request()->routeIs('admin.org-units') ? 'active' : '' }}">
-                                <a href="{{ route('admin.org-units') }}" class="menu-link">
-                                    <div data-i18n="Manage Units">Manage Units</div>
-                                </a>
-                            </li>
-                            <li
-                                class="menu-item {{ request()->routeIs('admin.org-units.structure') ? 'active' : '' }}">
-                                <a href="{{ route('admin.org-units.structure') }}" class="menu-link">
-                                    <div data-i18n="Structure">Structure</div>
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+                        <!-- Organization Units -->
+                        <li class="menu-item {{ request()->routeIs('admin.org-units*') ? 'active open' : '' }}">
+                            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                                <i class="menu-icon tf-icons ti ti-building"></i>
+                                <div data-i18n="Organization Units">Organization Units</div>
+                            </a>
+                            <ul class="menu-sub">
+                                <li class="menu-item {{ request()->routeIs('admin.org-units') ? 'active' : '' }}">
+                                    <a href="{{ route('admin.org-units') }}" class="menu-link">
+                                        <div data-i18n="Manage Units">Manage Units</div>
+                                    </a>
+                                </li>
+                                <li
+                                    class="menu-item {{ request()->routeIs('admin.org-units.structure') ? 'active' : '' }}">
+                                    <a href="{{ route('admin.org-units.structure') }}" class="menu-link">
+                                        <div data-i18n="Structure">Structure</div>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
 
-                    <!-- Org Unit Roles -->
-                    <li class="menu-item {{ request()->routeIs('admin.org-unit-roles*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.org-unit-roles') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-users-group"></i>
-                            <div data-i18n="Unit Roles">Org Unit Roles</div>
-                        </a>
-                    </li>
+                        <!-- Org Unit Roles -->
+                        <li class="menu-item {{ request()->routeIs('admin.org-unit-roles*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.org-unit-roles') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-users-group"></i>
+                                <div data-i18n="Unit Roles">Org Unit Roles</div>
+                            </a>
+                        </li>
 
-                    <!-- OKR Management -->
-                    <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">OKR Management</span>
-                    </li>
-                    <!-- OKR Types -->
-                    <li class="menu-item {{ request()->routeIs('admin.okr-types*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.okr-types') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-target"></i>
-                            <div data-i18n="OKR Types">OKR Types</div>
-                        </a>
-                    </li>
-                    <!-- Admin OKRs -->
-                    <li class="menu-item {{ request()->routeIs('admin.okrs*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.okrs') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-target-arrow"></i>
-                            <div data-i18n="OKRs">OKRs</div>
-                        </a>
-                    </li>
+                        <!-- OKR Management -->
+                        <li class="menu-header small text-uppercase">
+                            <span class="menu-header-text">OKR Management</span>
+                        </li>
+                        <!-- OKR Types -->
+                        <li class="menu-item {{ request()->routeIs('admin.okr-types*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.okr-types') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-target"></i>
+                                <div data-i18n="OKR Types">OKR Types</div>
+                            </a>
+                        </li>
+                        <!-- Admin OKRs -->
+                        <li class="menu-item {{ request()->routeIs('admin.okrs*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.okrs') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-target-arrow"></i>
+                                <div data-i18n="OKRs">OKRs</div>
+                            </a>
+                        </li>
                     @endif
 
                     @if (!auth()->user()->role || auth()->user()->role->name !== 'Admin')
-                    <!-- OKR Management header for employees -->
-                    <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">OKR Management</span>
-                    </li>
+                        <!-- OKR Management header for employees -->
+                        <li class="menu-header small text-uppercase">
+                            <span class="menu-header-text">OKR Management</span>
+                        </li>
                     @endif
 
                     <!-- Employee OKRs -->
                     @if (!auth()->user()->role || auth()->user()->role->name !== 'Admin')
-                    <li class="menu-item {{ request()->routeIs('okrs*') ? 'active' : '' }}">
-                        <a href="{{ route('okrs.index') }}" class="menu-link">
-                            <i class="menu-icon tf-icons ti ti-target-arrow"></i>
-                            <div data-i18n="OKRs">My OKRs</div>
-                        </a>
-                    </li>
+                        <li class="menu-item {{ request()->routeIs('okrs*') ? 'active' : '' }}">
+                            <a href="{{ route('okrs.index') }}" class="menu-link">
+                                <i class="menu-icon tf-icons ti ti-target-arrow"></i>
+                                <div data-i18n="OKRs">My OKRs</div>
+                            </a>
+                        </li>
                     @endif
                     <!-- Check-ins -->
                     <li class="menu-item {{ request()->routeIs('admin.check-ins*') ? 'active' : '' }}">
@@ -326,8 +328,6 @@
                         </div>
                     </footer>
                     <!-- / Footer -->
-
-                    <div class="content-backdrop fade"></div>
                 </div>
                 <!-- Content wrapper -->
             </div>

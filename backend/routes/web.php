@@ -159,6 +159,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pending', [CheckInController::class, 'pendingApprovals'])->name('admin.check-ins.pending');
         Route::get('/objective/{objectiveId}', [CheckInController::class, 'getByObjective'])->name('admin.check-ins.by-objective');
         Route::get('/objective/{objectiveId}/json', [CheckInController::class, 'getByObjectiveJson'])->name('admin.check-ins.by-objective-json');
+        Route::get('/objective/{objectiveId}/progress', [CheckInController::class, 'getProgressData'])->name('admin.check-ins.progress-data');
         Route::post('/', [CheckInController::class, 'store'])->name('admin.check-ins.store');
         Route::get('/{id}', [CheckInController::class, 'show'])->name('admin.check-ins.show');
         Route::get('/{id}/edit', [CheckInController::class, 'edit'])->name('admin.check-ins.edit');

@@ -45,7 +45,7 @@ class CheckInController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'objective_id' => 'required|integer|exists:objective,id',
-            'date' => 'required|date',
+            'date' => 'nullable|date',
             'current_value' => 'required|numeric',
             'comments' => 'nullable|string',
             'evidence_file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,xls,xlsx|max:10240',
@@ -57,6 +57,11 @@ class CheckInController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        // Set date to today if not provided
+        if (!$request->has('date') || empty($request->date)) {
+            $request->merge(['date' => now()->format('Y-m-d')]);
         }
 
         $objective = Objective::with('okr')->find($request->objective_id);

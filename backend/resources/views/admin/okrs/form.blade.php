@@ -138,6 +138,10 @@
             </button>
         </div>
         <div class="card-body">
+            <div class="alert alert-info d-flex justify-content-between align-items-center mb-3" id="totalWeightAlert">
+                <span><i class="ti ti-info-circle me-2"></i>Total Weight: <strong id="totalWeightDisplay">0</strong>% (must be exactly 100%)</span>
+                <span class="badge bg-primary" id="weightStatus">Not Valid</span>
+            </div>
             <div id="objectivesContainer">
                 @if ($isEdit && $okr->objectives->count() > 0)
                     @foreach ($okr->objectives as $index => $objective)
@@ -167,12 +171,31 @@
                                         <option value="">Select Type</option>
                                         <option value="numeric" {{ old('objectives.' . $index . '.target_type', $objective->target_type) == 'numeric' ? 'selected' : '' }}>Numeric</option>
                                         <option value="binary" {{ old('objectives.' . $index . '.target_type', $objective->target_type) == 'binary' ? 'selected' : '' }}>Binary</option>
+                                        <option value="accounting" {{ old('objectives.' . $index . '.target_type', $objective->target_type) == 'accounting' ? 'selected' : '' }}>Accounting</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4" class="target-value-container">
                                     <label class="form-label">Target Value <span class="text-danger">*</span></label>
-                                    <input type="number" name="objectives[{{ $index }}][target_value]" class="form-control"
-                                        step="0.01" value="{{ old('objectives.' . $index . '.target_value', $objective->target_value) }}" required>
+                                    @php
+                                        $currentTargetType = old('objectives.' . $index . '.target_type', $objective->target_type);
+                                    @endphp
+                                    @if ($currentTargetType === 'binary')
+                                        <select name="objectives[{{ $index }}][target_value]" class="form-select" required>
+                                            <option value="">Select Status</option>
+                                            <option value="1" {{ old('objectives.' . $index . '.target_value', $objective->target_value) == 1 ? 'selected' : '' }}>Achieved</option>
+                                            <option value="0" {{ old('objectives.' . $index . '.target_value', $objective->target_value) == 0 ? 'selected' : '' }}>Not Achieved</option>
+                                        </select>
+                                    @elseif ($currentTargetType === 'accounting')
+                                        <div class="input-group">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" name="objectives[{{ $index }}][target_value]" class="form-control"
+                                                step="0.01" value="{{ old('objectives.' . $index . '.target_value', $objective->target_value) }}" required>
+                                            <span class="input-group-text">.00</span>
+                                        </div>
+                                    @else
+                                        <input type="number" name="objectives[{{ $index }}][target_value]" class="form-control"
+                                            step="0.01" value="{{ old('objectives.' . $index . '.target_value', $objective->target_value) }}" required>
+                                    @endif
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Deadline <span class="text-danger">*</span></label>
@@ -253,6 +276,16 @@
             // Initialize owner fields based on OKR type
             updateOwnerFields();
 
+            // Initialize total weight display
+            updateTotalWeightDisplay();
+
+            // Add weight change listeners
+            document.addEventListener('change', function(e) {
+                if (e.target.name && e.target.name.includes('[weight]')) {
+                    updateTotalWeightDisplay();
+                }
+            });
+
             // Show success message if exists
             const successMessage = localStorage.getItem('toast_success');
             if (successMessage) {
@@ -326,6 +359,7 @@
                                 <option value="">Select Type</option>
                                 <option value="numeric">Numeric</option>
                                 <option value="binary">Binary</option>
+                                <option value="accounting">Accounting</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -379,12 +413,18 @@
                 });
             });
 
+            // Update total weight display
+            updateTotalWeightDisplay();
+
             objectiveIndex++;
         }
 
         function removeObjective(button) {
             const objectiveItem = button.closest('.objective-item');
             objectiveItem.remove();
+
+            // Update total weight display
+            updateTotalWeightDisplay();
 
             // Check if no objectives left
             const container = document.getElementById('objectivesContainer');
@@ -398,24 +438,90 @@
             }
         }
 
-        function updateTargetValueField(select, index) {
-            const targetValueInput = document.querySelector(`.objective-item[data-index="${index}"] input[name="objectives[${index}][target_value]"]`);
-            if (select.value === 'binary') {
-                targetValueInput.setAttribute('step', '1');
-                targetValueInput.setAttribute('min', '0');
-                targetValueInput.setAttribute('max', '1');
-                targetValueInput.placeholder = '0 or 1';
-            } else {
-                targetValueInput.setAttribute('step', '0.01');
-                targetValueInput.removeAttribute('min');
-                targetValueInput.removeAttribute('max');
-                targetValueInput.placeholder = 'Enter target value';
+        function updateTotalWeightDisplay() {
+            const weightInputs = document.querySelectorAll('input[name*="[weight]"]');
+            let totalWeight = 0;
+            weightInputs.forEach(input => {
+                totalWeight += parseFloat(input.value) || 0;
+            });
+
+            const displayEl = document.getElementById('totalWeightDisplay');
+            const statusEl = document.getElementById('weightStatus');
+            const alertEl = document.getElementById('totalWeightAlert');
+
+            if (displayEl) {
+                displayEl.textContent = totalWeight.toFixed(2);
             }
+
+            // Allow small floating point difference
+            const isValid = Math.abs(totalWeight - 100) <= 0.01;
+
+            if (statusEl && alertEl) {
+                if (isValid) {
+                    statusEl.textContent = 'Valid';
+                    statusEl.className = 'badge bg-success';
+                    alertEl.className = 'alert alert-success d-flex justify-content-between align-items-center mb-3';
+                } else {
+                    statusEl.textContent = 'Not Valid';
+                    statusEl.className = 'badge bg-danger';
+                    alertEl.className = 'alert alert-warning d-flex justify-content-between align-items-center mb-3';
+                }
+            }
+        }
+
+        function updateTargetValueField(select, index) {
+            const container = select.closest('.row');
+            const targetValueContainer = select.parentElement.nextElementSibling;
+            const currentValueInput = container.querySelector(`[name*="[target_value]"]`);
+            const currentValue = currentValueInput ? currentValueInput.value : '';
+
+            let newField = '';
+            const label = '<label class="form-label">Target Value <span class="text-danger">*</span></label>';
+
+            if (select.value === 'binary') {
+                newField = `
+                    ${label}
+                    <select name="objectives[${index}][target_value]" class="form-select" required>
+                        <option value="">Select Status</option>
+                        <option value="1" ${currentValue == 1 ? 'selected' : ''}>Achieved</option>
+                        <option value="0" ${currentValue == 0 ? 'selected' : ''}>Not Achieved</option>
+                    </select>
+                `;
+            } else if (select.value === 'accounting') {
+                newField = `
+                    ${label}
+                    <div class="input-group">
+                        <span class="input-group-text">Rp</span>
+                        <input type="number" name="objectives[${index}][target_value]" class="form-control" step="0.01" value="${currentValue}" required>
+                        <span class="input-group-text">.00</span>
+                    </div>
+                `;
+            } else {
+                newField = `
+                    ${label}
+                    <input type="number" name="objectives[${index}][target_value]" class="form-control" step="0.01" value="${currentValue}" required>
+                `;
+            }
+
+            targetValueContainer.innerHTML = newField;
         }
 
         // Form submission handler
         document.getElementById('okrForm').addEventListener('submit', function(e) {
             e.preventDefault();
+
+            // Validate total objective weight equals 100%
+            const weightInputs = document.querySelectorAll('input[name*="[weight]"]');
+            let totalWeight = 0;
+            weightInputs.forEach(input => {
+                totalWeight += parseFloat(input.value) || 0;
+            });
+
+            // Allow small floating point difference
+            if (Math.abs(totalWeight - 100) > 0.01) {
+                showToast('Validation Error', `Total objective weight must be exactly 100%. Current total: ${totalWeight.toFixed(2)}%`, 'error');
+                return;
+            }
 
             const form = this;
             const formData = new FormData(form);

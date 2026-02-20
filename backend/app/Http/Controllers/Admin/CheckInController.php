@@ -13,7 +13,7 @@ class CheckInController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CheckIn::with(['objective', 'objective.okr.owner', 'objective.trackerEmployee', 'approvalLogs'])
+        $query = CheckIn::with(['objective', 'objective.okr.employee', 'objective.okr.orgUnit', 'objective.trackerEmployee', 'approvalLogs'])
             ->orderBy('date', 'desc');
 
         $checkIns = $query->get();
@@ -62,7 +62,7 @@ class CheckInController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'objective_id' => 'required|integer|exists:objective,id',
-            'date' => 'required|date',
+            'date' => 'nullable|date',
             'current_value' => 'required|numeric',
             'comments' => 'nullable|string',
             'evidence_file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,xls,xlsx|max:10240',
@@ -79,6 +79,11 @@ class CheckInController extends Controller
             return back()
                 ->withErrors($validator)
                 ->withInput();
+        }
+
+        // Set date to today if not provided
+        if (!$request->has('date') || empty($request->date)) {
+            $request->merge(['date' => now()->format('Y-m-d')]);
         }
 
         $objective = Objective::with('okr')->find($request->objective_id);
@@ -456,7 +461,7 @@ class CheckInController extends Controller
             ->whereDoesntHave('approvalLogs', function ($query) {
                 $query->rejected();
             })
-            ->with(['objective', 'objective.okr.owner', 'objective.trackerEmployee', 'objective.approverEmployee', 'approvalLogs'])
+            ->with(['objective', 'objective.okr.employee', 'objective.okr.orgUnit', 'objective.trackerEmployee', 'objective.approverEmployee', 'approvalLogs'])
             ->orderBy('date', 'desc')
             ->get();
 
@@ -487,6 +492,33 @@ class CheckInController extends Controller
         });
 
         return view('admin.check-ins.by-objective', compact('objective', 'checkIns'));
+    }
+
+    /**
+     * Get updated progress data for objective and its OKR (for AJAX)
+     */
+    public function getProgressData($objectiveId)
+    {
+        $objective = Objective::with('okr')->find($objectiveId);
+
+        if (!$objective) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Objective not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'objective_id' => $objective->id,
+                'objective_current_value' => $objective->current_value,
+                'objective_target_value' => $objective->target_value,
+                'objective_progress' => $objective->progress,
+                'okr_id' => $objective->okr->id,
+                'okr_progress' => $objective->okr->progress,
+            ],
+        ]);
     }
 
     /**

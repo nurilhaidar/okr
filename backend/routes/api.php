@@ -72,11 +72,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/objectives-progress/all', [ObjectiveController::class, 'getAllProgress']);
 
     // CheckIn Routes
-    Route::get('/check-ins/by-objective/{objectiveId}', [CheckInController::class, 'getByObjective']);
-    Route::get('/check-ins/by-tracker/{trackerId}', [CheckInController::class, 'getByTracker']);
-    Route::get('/check-ins/pending-approvals', [CheckInController::class, 'getPendingApprovals']);
-    Route::get('/check-ins/{id}/approval-logs', [CheckInController::class, 'getApprovalLogs']);
-    Route::apiResource('check-ins', CheckInController::class);
-    Route::post('/check-ins/{id}/approve', [CheckInController::class, 'approve']);
-    Route::post('/check-ins/{id}/reject', [CheckInController::class, 'reject']);
+    Route::get('/check-ins/by-objective/{objectiveId}', [CheckInController::class, 'getByObjective'])->name('check-ins.by-objective');
+    Route::get('/check-ins/by-tracker/{trackerId}', [CheckInController::class, 'getByTracker'])->name('check-ins.by-tracker');
+    Route::get('/check-ins/pending-approvals', [CheckInController::class, 'getPendingApprovals'])->name('check-ins.pending-approvals');
+    Route::get('/check-ins/{id}/approval-logs', [CheckInController::class, 'getApprovalLogs'])->name('check-ins.approval-logs');
+    Route::apiResource('check-ins', CheckInController::class)->names([
+        'index' => 'check-ins.index',
+        'show' => 'check-ins.show',
+        'store' => 'check-ins.store',
+        'update' => 'check-ins.update',
+        'destroy' => 'check-ins.destroy',
+    ]);
+    Route::post('/check-ins/{id}/approve', [CheckInController::class, 'approve'])->name('check-ins.approve');
+    Route::post('/check-ins/{id}/reject', [CheckInController::class, 'reject'])->name('check-ins.reject');
 });

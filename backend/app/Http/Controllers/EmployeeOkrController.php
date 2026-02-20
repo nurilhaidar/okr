@@ -23,20 +23,52 @@ class EmployeeOkrController extends Controller
         // Get filter parameters
         $search = $request->query('search', '');
         $owner = $request->query('owner', '');
-        $status = $request->query('status', '');
+        $status = $request->query('status', 'active');
+        $tab = $request->query('tab', 'my-okrs');
 
-        // Build query - Employee sees only OKRs where they are owner, tracker, or approver
+        // Get OrgUnits where the employee is a member
+        $memberOrgUnits = $user->orgUnits()->active()->pluck('orgunit.id')->toArray();
+
+        // Build base query with all relationships
         $query = Okr::with(['okrType', 'employee', 'orgUnit', 'objectives.checkIns', 'objectives.checkIns.approvalLogs', 'objectives.trackerEmployee', 'objectives.approverEmployee'])
-            ->where(function ($query) use ($user) {
-                $query->where('employee_id', $user->id)
-                    ->orWhereHas('objectives', function ($q) use ($user) {
-                        $q->where('tracker', $user->id);
-                    })
-                    ->orWhereHas('objectives', function ($q) use ($user) {
-                        $q->where('approver', $user->id);
-                    });
-            })
             ->orderBy('created_at', 'desc');
+
+        // Apply tab filter - only get OKRs relevant to that tab
+        switch ($tab) {
+            case 'my-okrs':
+                // Only OKRs where user is the owner
+                $query->where('employee_id', $user->id);
+                break;
+            case 'tracking':
+                // Only OKRs where user is tracker on any objective
+                $query->whereHas('objectives', function ($q) use ($user) {
+                    $q->where('tracker', $user->id);
+                });
+                break;
+            case 'approving':
+                // Only OKRs where user is approver on any objective
+                $query->whereHas('objectives', function ($q) use ($user) {
+                    $q->where('approver', $user->id);
+                });
+                break;
+            case 'team-okrs':
+                // Only OKRs owned by user's org units
+                $query->whereIn('orgunit_id', $memberOrgUnits);
+                break;
+            default:
+                // All OKRs where user has any role
+                $query->where(function ($q) use ($user, $memberOrgUnits) {
+                    $q->where('employee_id', $user->id)
+                        ->orWhereHas('objectives', function ($q) use ($user) {
+                            $q->where('tracker', $user->id);
+                        })
+                        ->orWhereHas('objectives', function ($q) use ($user) {
+                            $q->where('approver', $user->id);
+                        })
+                        ->orWhereIn('orgunit_id', $memberOrgUnits);
+                });
+                break;
+        }
 
         // Get all OKRs first
         $okrs = $query->get();
@@ -78,36 +110,58 @@ class EmployeeOkrController extends Controller
 
         // Determine role for each OKR
         foreach ($okrs as &$okr) {
-            $okr->role = 'owner';
+            $roles = [];
+
+            // Check if user is a member of the owning OrgUnit (role: member)
+            if (in_array($okr->orgunit_id, $memberOrgUnits)) {
+                $roles[] = 'member';
+            }
+
+            // Check if user is owner (employee_id = user.id)
+            if ($okr->employee_id == $user->id) {
+                $roles[] = 'owner';
+            }
+
+            // Check if user is tracker or approver
             foreach ($okr->objectives as $obj) {
                 if ($obj->tracker == $user->id) {
-                    $okr->role = 'tracker';
-                    break;
+                    $roles[] = 'tracker';
                 }
                 if ($obj->approver == $user->id) {
-                    $okr->role = 'approver';
-                    break;
+                    $roles[] = 'approver';
                 }
             }
+
+            // Remove duplicates and set as array
+            $okr->roles = array_unique($roles);
+            // Keep single role for backward compatibility
+            $okr->role = !empty($roles) ? $roles[0] : null;
         }
 
-        return view('employee.okrs.index', compact('okrs'));
+        return view('employee.okrs.index', compact('okrs', 'tab'));
     }
 
     /**
      * Show form for creating a new OKR.
+     * Employees can only create "Additional" type OKRs for themselves.
      */
     public function create()
     {
-        $okrTypes = OkrType::all();
-        $employees = Employee::active()->get();
-        $orgUnits = OrgUnit::active()->get();
+        $user = Auth::user();
+
+        // Only get "Additional" OKR type for employees
+        $okrTypes = OkrType::where('name', 'Additional')->where('is_employee', true)->get();
+
+        // For employees, only pass themselves as the owner option
+        $employees = collect([$user]);
+        $orgUnits = collect();
 
         return view('employee.okrs.create', compact('okrTypes', 'employees', 'orgUnits'));
     }
 
     /**
      * Show the form for editing the specified OKR.
+     * Employees can only edit their own Additional OKRs.
      */
     public function edit($id)
     {
@@ -120,41 +174,37 @@ class EmployeeOkrController extends Controller
                 ->with('error', 'OKR not found.');
         }
 
-        // Check if user has access (owner, tracker, or approver)
-        $hasAccess = $okr->employee_id == $user->id;
-        foreach ($okr->objectives as $obj) {
-            if ($obj->tracker == $user->id || $obj->approver == $user->id) {
-                $hasAccess = true;
-                break;
-            }
-        }
-
-        if (!$hasAccess) {
+        // Employees can only edit their own Additional OKRs
+        if ($okr->employee_id != $user->id || $okr->okrType->name !== 'Additional') {
             return redirect()
                 ->route('okrs.index')
-                ->with('error', 'You do not have permission to edit this OKR.');
+                ->with('error', 'You can only edit your own Additional OKRs.');
         }
 
-        $okrTypes = OkrType::all();
-        $employees = Employee::active()->get();
-        $orgUnits = OrgUnit::active()->get();
+        // Only get "Additional" OKR type for employees
+        $okrTypes = OkrType::where('name', 'Additional')->where('is_employee', true)->get();
+
+        // For employees, only pass themselves as the owner option
+        $employees = collect([$user]);
+        $orgUnits = collect();
 
         return view('employee.okrs.edit', compact('okr', 'okrTypes', 'employees', 'orgUnits'));
     }
 
     /**
      * Store a newly created OKR.
+     * Employees can only create "Additional" type OKRs for themselves.
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $validator = \Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'weight' => 'required|numeric|min:0|max:100',
             'okr_type_id' => 'required|exists:okr_type,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'employee_id' => 'nullable|integer|exists:employee,id',
-            'orgunit_id' => 'nullable|integer|exists:orgunit,id',
             'is_active' => 'required|in:0,1',
             'objectives' => 'array',
             'objectives.*.description' => 'required|string',
@@ -167,27 +217,16 @@ class EmployeeOkrController extends Controller
             'objectives.*.approver' => 'nullable|exists:employee,id',
         ]);
 
-        // Custom validation for store method
-        $validator->after(function ($validator) use ($request) {
+        // Custom validation for employee store method
+        $validator->after(function ($validator) use ($request, $user) {
             $okrType = OkrType::find($request->okr_type_id);
             if (!$okrType) {
                 return;
             }
 
-            if ($okrType->is_employee && empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID is required for this OKR type.');
-            }
-
-            if (!$okrType->is_employee && empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
-            }
-
-            if ($okrType->is_employee && !empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
-            }
-
-            if (!$okrType->is_employee && !empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            // Employees can only create "Additional" type OKRs
+            if ($okrType->name !== 'Additional' || !$okrType->is_employee) {
+                $validator->errors()->add('okr_type_id', 'Employees can only create Additional type OKRs.');
             }
 
             // Validate objective deadlines are within OKR period
@@ -209,12 +248,28 @@ class EmployeeOkrController extends Controller
                     }
                 }
             }
+
+            // Validate that if OKR is being set to active, current date must be within period
+            if ($request->is_active == '1') {
+                $currentDate = now()->startOfDay();
+                $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+
+                if ($currentDate->lt($startDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR before the start date. Current date is ' . now()->toDateString() . ' but start date is ' . $request->start_date . '.');
+                }
+
+                if ($currentDate->gt($endDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR after the end date. Current date is ' . now()->toDateString() . ' but end date is ' . $request->end_date . '.');
+                }
+            }
         });
 
         if ($validator->fails()) {
-            return back()
-                ->withErrors($validator)
-                ->withInput();
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $okr = Okr::create([
@@ -223,8 +278,8 @@ class EmployeeOkrController extends Controller
             'okr_type_id' => $request->okr_type_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'employee_id' => $request->employee_id,
-            'orgunit_id' => $request->orgunit_id,
+            'employee_id' => $user->id, // Force owner to be the current employee
+            'orgunit_id' => null,
             'is_active' => $request->is_active == '1',
         ]);
 
@@ -246,18 +301,20 @@ class EmployeeOkrController extends Controller
             }
         }
 
-        return redirect()
-            ->route('okrs.index')
-            ->with('success', 'OKR created successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'OKR created successfully.'
+        ]);
     }
 
     /**
      * Update the specified OKR.
+     * Employees can only update their own Additional OKRs.
      */
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        $okr = Okr::with('objectives')->find($id);
+        $okr = Okr::with('objectives', 'okrType')->find($id);
 
         if (!$okr) {
             return redirect()
@@ -265,19 +322,11 @@ class EmployeeOkrController extends Controller
                 ->with('error', 'OKR not found.');
         }
 
-        // Check if user has access (owner, tracker, or approver)
-        $hasAccess = $okr->employee_id == $user->id;
-        foreach ($okr->objectives as $obj) {
-            if ($obj->tracker == $user->id || $obj->approver == $user->id) {
-                $hasAccess = true;
-                break;
-            }
-        }
-
-        if (!$hasAccess) {
+        // Employees can only update their own Additional OKRs
+        if ($okr->employee_id != $user->id || $okr->okrType->name !== 'Additional') {
             return redirect()
                 ->route('okrs.index')
-                ->with('error', 'You do not have permission to edit this OKR.');
+                ->with('error', 'You can only edit your own Additional OKRs.');
         }
 
         $validator = \Validator::make($request->all(), [
@@ -286,8 +335,6 @@ class EmployeeOkrController extends Controller
             'okr_type_id' => 'required|exists:okr_type,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'employee_id' => 'nullable|integer|exists:employee,id',
-            'orgunit_id' => 'nullable|integer|exists:orgunit,id',
             'is_active' => 'required|in:0,1',
             'objectives' => 'array',
             'objectives.*.id' => 'nullable|integer',
@@ -301,27 +348,16 @@ class EmployeeOkrController extends Controller
             'objectives.*.approver' => 'nullable|exists:employee,id',
         ]);
 
-        // Custom validation for update method
-        $validator->after(function ($validator) use ($request) {
+        // Custom validation for employee update method
+        $validator->after(function ($validator) use ($request, $user) {
             $okrType = OkrType::find($request->okr_type_id);
             if (!$okrType) {
                 return;
             }
 
-            if ($okrType->is_employee && empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID is required for this OKR type.');
-            }
-
-            if (!$okrType->is_employee && empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID is required for this OKR type.');
-            }
-
-            if ($okrType->is_employee && !empty($request->employee_id)) {
-                $validator->errors()->add('employee_id', 'Employee ID should not be set for org unit OKR type.');
-            }
-
-            if (!$okrType->is_employee && !empty($request->orgunit_id)) {
-                $validator->errors()->add('orgunit_id', 'Organization Unit ID should not be set for employee OKR type.');
+            // Employees can only update "Additional" type OKRs
+            if ($okrType->name !== 'Additional' || !$okrType->is_employee) {
+                $validator->errors()->add('okr_type_id', 'Employees can only create Additional type OKRs.');
             }
 
             // Validate objective deadlines are within OKR period
@@ -343,12 +379,28 @@ class EmployeeOkrController extends Controller
                     }
                 }
             }
+
+            // Validate that if OKR is being set to active, current date must be within period
+            if ($request->is_active == '1') {
+                $currentDate = now()->startOfDay();
+                $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+
+                if ($currentDate->lt($startDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR before the start date. Current date is ' . now()->toDateString() . ' but start date is ' . $request->start_date . '.');
+                }
+
+                if ($currentDate->gt($endDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR after the end date. Current date is ' . now()->toDateString() . ' but end date is ' . $request->end_date . '.');
+                }
+            }
         });
 
         if ($validator->fails()) {
-            return back()
-                ->withErrors($validator)
-                ->withInput();
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $okr->update([
@@ -357,8 +409,8 @@ class EmployeeOkrController extends Controller
             'okr_type_id' => $request->okr_type_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'employee_id' => $request->employee_id,
-            'orgunit_id' => $request->orgunit_id,
+            'employee_id' => $user->id, // Force owner to remain the current employee
+            'orgunit_id' => null,
             'is_active' => $request->is_active == '1',
         ]);
 
@@ -408,9 +460,10 @@ class EmployeeOkrController extends Controller
             Objective::whereIn('id', $toDelete)->delete();
         }
 
-        return redirect()
-            ->route('okrs.index')
-            ->with('success', 'OKR updated successfully.');
+        return response()->json([
+            'success' => true,
+            'message' => 'OKR updated successfully.'
+        ]);
     }
 
     /**

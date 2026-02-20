@@ -85,6 +85,25 @@ class Okr extends Model
     }
 
     /**
+     * Check if OKR is currently active (considers both flag and end date)
+     * Use this method to dynamically check if an OKR should be considered active
+     */
+    public function isCurrentlyActive(): bool
+    {
+        // If explicitly inactive, return false
+        if (!$this->is_active) {
+            return false;
+        }
+
+        // If end date has passed, consider it inactive
+        if ($this->end_date && $this->end_date->startOfDay()->isPast()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Calculate overall progress percentage based on weighted average of objectives
      * Each objective's contribution is: (objective_progress * objective_weight)
      */

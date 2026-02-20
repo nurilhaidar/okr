@@ -186,6 +186,21 @@ class OkrController extends Controller
                     }
                 }
             }
+
+            // Validate that if OKR is being set to active, current date must be within period
+            if ($request->is_active == '1') {
+                $currentDate = now()->startOfDay();
+                $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+
+                if ($currentDate->lt($startDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR before the start date. Current date is ' . now()->toDateString() . ' but start date is ' . $request->start_date . '.');
+                }
+
+                if ($currentDate->gt($endDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR after the end date. Current date is ' . now()->toDateString() . ' but end date is ' . $request->end_date . '.');
+                }
+            }
         });
 
         if ($validator->fails()) {
@@ -322,6 +337,21 @@ class OkrController extends Controller
                             $validator->errors()->add("objectives.{$index}.deadline", 'Objective deadline must be on or before OKR end date.');
                         }
                     }
+                }
+            }
+
+            // Validate that if OKR is being set to active, current date must be within period
+            if ($request->is_active == '1') {
+                $currentDate = now()->startOfDay();
+                $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+
+                if ($currentDate->lt($startDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR before the start date. Current date is ' . now()->toDateString() . ' but start date is ' . $request->start_date . '.');
+                }
+
+                if ($currentDate->gt($endDate)) {
+                    $validator->errors()->add('is_active', 'Cannot activate OKR after the end date. Current date is ' . now()->toDateString() . ' but end date is ' . $request->end_date . '.');
                 }
             }
         });

@@ -118,6 +118,18 @@
 @endphp
 
 @section('content')
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">OKRs</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
     <!-- Admin View - All OKRs Table -->
     <div class="row">
         <div class="col-12 col-lg-12 mb-4">
@@ -179,7 +191,8 @@
                                     <button type="submit" class="btn btn-primary">
                                         <i class="ti ti-search"></i>
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()" title="Reset">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()"
+                                        title="Reset">
                                         <i class="ti ti-refresh"></i>
                                     </button>
                                     <div class="ms-auto d-flex gap-2">
@@ -312,8 +325,14 @@
                                 @forelse($okrs as $okr)
                                     <tr class="okr-row" data-okr-id="{{ $okr->id }}" style="cursor: pointer;">
                                         <td>
-                                            <div class="fw-bold">{{ $okr->name }}</div>
-                                            <small class="text-muted">{{ $okr->objectives->count() }} objectives</small>
+                                            <div class="d-flex align-items-center">
+                                                <i class="ti ti-chevron-right me-2" id="chevron-{{ $okr->id }}"></i>
+                                                <div>
+                                                    <div class="fw-bold">{{ $okr->name }}</div>
+                                                    <small class="text-muted">{{ $okr->objectives->count() }}
+                                                        objectives</small>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
                                             <span class="badge bg-label-primary">{{ $okr->okrType->name ?? 'N/A' }}</span>
@@ -340,12 +359,14 @@
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="progress okr-progress flex-grow-1 me-2" style="height: 8px;">
-                                                    <div class="progress-bar {{ getProgressColor($okr->progress) }}"
+                                                    <div id="okr-progress-bar-{{ $okr->id }}"
+                                                        class="progress-bar {{ getProgressColor($okr->progress) }}"
                                                         role="progressbar" style="width: {{ $okr->progress }}%"
                                                         aria-valuenow="{{ $okr->progress }}" aria-valuemin="0"
                                                         aria-valuemax="100"></div>
                                                 </div>
-                                                <span class="small fw-bold">{{ number_format($okr->progress, 1) }}%</span>
+                                                <span id="okr-progress-text-{{ $okr->id }}"
+                                                    class="small fw-bold">{{ number_format($okr->progress, 1) }}%</span>
                                             </div>
                                         </td>
                                         <td>
@@ -362,27 +383,6 @@
                                                     onclick="event.stopPropagation();">
                                                     <i class="ti ti-pencil"></i>
                                                 </a>
-                                                @if ($okr->is_active)
-                                                    <form method="POST"
-                                                        action="{{ route('admin.okrs.deactivate', $okr->id) }}"
-                                                        class="d-inline">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-warning"
-                                                            onclick="event.stopPropagation(); return confirm('Are you sure you want to deactivate this OKR?');">
-                                                            <i class="ti ti-player-pause"></i>
-                                                        </button>
-                                                    </form>
-                                                @else
-                                                    <form method="POST"
-                                                        action="{{ route('admin.okrs.activate', $okr->id) }}"
-                                                        class="d-inline">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-success"
-                                                            onclick="event.stopPropagation();">
-                                                            <i class="ti ti-player-play"></i>
-                                                        </button>
-                                                    </form>
-                                                @endif
                                                 <form method="POST" action="{{ route('admin.okrs.destroy', $okr->id) }}"
                                                     class="d-inline">
                                                     @csrf
@@ -401,7 +401,9 @@
                                         <td colspan="7" class="p-3 bg-light">
                                             <h6 class="mb-3">Objectives</h6>
                                             @forelse($okr->objectives as $objective)
-                                                <div class="objective-item">
+                                                <div class="objective-item" id="objective-item-{{ $objective->id }}"
+                                                    data-okr-id="{{ $okr->id }}"
+                                                    data-objective-id="{{ $objective->id }}">
                                                     <div class="d-flex justify-content-between mb-2">
                                                         <div class="flex-grow-1">
                                                             <div class="d-flex align-items-center gap-2 mb-1">
@@ -434,20 +436,23 @@
                                                                 {{ number_format($objective->weight * 100) }}%</div>
                                                             <div class="progress okr-progress"
                                                                 style="width: 100px; height: 6px;">
-                                                                <div class="progress-bar {{ getProgressColor($objective->progress) }}"
+                                                                <div id="objective-progress-bar-{{ $objective->id }}"
+                                                                    class="progress-bar {{ getProgressColor($objective->progress) }}"
                                                                     role="progressbar"
                                                                     style="width: {{ $objective->progress }}%"
                                                                     aria-valuenow="{{ $objective->progress }}"
                                                                     aria-valuemin="0" aria-valuemax="100"></div>
                                                             </div>
-                                                            <div class="small fw-bold">
+                                                            <div id="objective-progress-text-{{ $objective->id }}"
+                                                                class="small fw-bold">
                                                                 {{ number_format($objective->progress, 1) }}%</div>
                                                         </div>
                                                     </div>
                                                     <div
                                                         class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                                                         <div class="d-flex align-items-center gap-2">
-                                                            <span class="small text-muted">
+                                                            <span id="objective-current-value-{{ $objective->id }}"
+                                                                class="small text-muted">
                                                                 {{ $objective->current_value ?? 0 }} /
                                                                 {{ $objective->target_value }}
                                                             </span>
@@ -512,12 +517,7 @@
                             <form id="checkInForm">
                                 <input type="hidden" id="checkInObjectiveId" name="objective_id">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Date <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="date" id="checkInDate"
-                                            required>
-                                    </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <label class="form-label">Current Value <span class="text-danger">*</span></label>
                                         <div id="currentValueContainer">
                                             <!-- Will be populated based on target type -->
@@ -541,6 +541,23 @@
                                     </div>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+
+                    <!-- Total Progress Display -->
+                    <div class="card mb-3">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted fw-bold">TOTAL PROGRESS</small>
+                                <small id="totalProgressText" class="fw-bold">0%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div id="totalProgressBar" class="progress-bar bg-primary" role="progressbar"
+                                    style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small id="totalCurrentValueText" class="text-muted">0 / 0</small>
+                            </div>
                         </div>
                     </div>
 
@@ -585,9 +602,14 @@
                 row.addEventListener('click', function() {
                     const okrId = this.getAttribute('data-okr-id');
                     const objectivesRow = document.getElementById('objectives-' + okrId);
+                    const chevron = document.getElementById('chevron-' + okrId);
                     if (objectivesRow) {
-                        objectivesRow.style.display = objectivesRow.style.display === 'none' ?
-                            'table-row' : 'none';
+                        const isHidden = objectivesRow.style.display === 'none';
+                        objectivesRow.style.display = isHidden ? 'table-row' : 'none';
+                        if (chevron) {
+                            chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                            chevron.style.transition = 'transform 0.2s';
+                        }
                     }
                 });
             });
@@ -730,8 +752,19 @@
             document.getElementById('checkInObjectiveDescription').textContent = description;
             document.getElementById('checkInObjectiveId').value = objectiveId;
 
-            // Set today's date as default
-            document.getElementById('checkInDate').value = new Date().toISOString().split('T')[0];
+            // Initialize total progress display (will be updated after loading check-ins)
+            const progressBar = document.getElementById('totalProgressBar');
+            const progressText = document.getElementById('totalProgressText');
+            const currentValueText = document.getElementById('totalCurrentValueText');
+
+            if (progressBar) {
+                progressBar.style.width = '0%';
+                progressBar.setAttribute('aria-valuenow', '0');
+                progressBar.classList.remove('bg-success', 'bg-primary', 'bg-warning', 'bg-danger');
+                progressBar.classList.add('bg-primary');
+            }
+            if (progressText) progressText.textContent = '0%';
+            if (currentValueText) currentValueText.textContent = `0 / ${targetValue}`;
 
             // Build current value input based on target type
             const container = document.getElementById('currentValueContainer');
@@ -775,6 +808,9 @@
                         const card = createCheckInCard(checkIn);
                         historyContainer.appendChild(card);
                     });
+
+                    // Calculate and update total progress (sum of approved check-ins)
+                    updateTotalProgress(data.data);
                 } else {
                     historyContainer.innerHTML = `
                         <div class="check-in-empty-state">
@@ -782,6 +818,9 @@
                             <p class="mb-0 mt-2">No check-ins yet. Add your first check-in above.</p>
                         </div>
                     `;
+
+                    // Reset total progress display
+                    updateTotalProgress([]);
                 }
             } catch (error) {
                 console.error('Error loading check-ins:', error);
@@ -791,6 +830,49 @@
                         Failed to load check-in history.
                     </div>
                 `;
+            }
+        }
+
+        function updateTotalProgress(checkIns) {
+            // Sum up current values from all approved check-ins
+            let totalCurrentValue = 0;
+            checkIns.forEach(checkIn => {
+                if (checkIn.current_status === 'approved') {
+                    totalCurrentValue += parseFloat(checkIn.current_value) || 0;
+                }
+            });
+
+            // Calculate progress percentage
+            const progress = currentTargetValue > 0 ?
+                Math.min(100, Math.max(0, (totalCurrentValue / currentTargetValue) * 100)) :
+                0;
+
+            // Get progress color
+            const getProgressColor = (progress) => {
+                if (progress >= 100) return 'bg-success';
+                if (progress >= 50) return 'bg-primary';
+                if (progress >= 25) return 'bg-warning';
+                return 'bg-danger';
+            };
+
+            // Update progress bar
+            const progressBar = document.getElementById('totalProgressBar');
+            const progressText = document.getElementById('totalProgressText');
+            const currentValueText = document.getElementById('totalCurrentValueText');
+
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.classList.remove('bg-success', 'bg-primary', 'bg-warning', 'bg-danger');
+                progressBar.classList.add(getProgressColor(progress));
+            }
+
+            if (progressText) {
+                progressText.textContent = `${progress.toFixed(1)}%`;
+            }
+
+            if (currentValueText) {
+                currentValueText.textContent = `${totalCurrentValue} / ${currentTargetValue}`;
             }
         }
 
@@ -824,20 +906,20 @@
                     </div>
                 </div>
                 <div class="check-in-card-body">
-                    ${checkIn.comments ? `<p class="mb-2">${checkIn.comments}</p>` : ''}
+                    ${checkIn.comments ? `<p class="mb-2">${checkIn.comments}</p>` : '<p class="mb-2 fst-italic text-muted">No Comments Added</p>'}
                     ${checkIn.evidence_path ? `
-                                            <a href="${checkIn.evidence_path}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                                                <i class="ti ti-file me-1"></i>View Evidence
-                                            </a>
-                                        ` : ''}
+                                                <a href="${checkIn.evidence_path}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                                                    <i class="ti ti-file me-1"></i>View Evidence
+                                                </a>
+                                            ` : ''}
                     ${status === 'pending' ? `
-                                            <button type="button" class="btn btn-sm btn-success me-2" onclick="approveCheckIn(${checkIn.id})">
-                                                <i class="ti ti-check me-1"></i>Approve
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="rejectCheckIn(${checkIn.id})">
-                                                <i class="ti ti-x me-1"></i>Reject
-                                            </button>
-                                        ` : ''}
+                                                <button type="button" class="btn btn-sm btn-success me-2" onclick="approveCheckIn(${checkIn.id})">
+                                                    <i class="ti ti-check me-1"></i>Approve
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="rejectCheckIn(${checkIn.id})">
+                                                    <i class="ti ti-x me-1"></i>Reject
+                                                </button>
+                                            ` : ''}
                 </div>
             `;
             return card;
@@ -861,6 +943,7 @@
                 if (response.ok) {
                     showToast('Success', data.message || 'Check-in approved successfully', 'success');
                     await loadCheckIns(currentObjectiveId);
+                    await refreshProgress(currentObjectiveId);
                 } else {
                     showToast('Error', data.message || 'Failed to approve check-in', 'error');
                 }
@@ -888,6 +971,7 @@
                 if (response.ok) {
                     showToast('Success', data.message || 'Check-in rejected successfully', 'success');
                     await loadCheckIns(currentObjectiveId);
+                    await refreshProgress(currentObjectiveId);
                 } else {
                     showToast('Error', data.message || 'Failed to reject check-in', 'error');
                 }
@@ -916,6 +1000,7 @@
                 if (response.ok || response.status === 204) {
                     showToast('Success', 'Check-in deleted successfully', 'success');
                     await loadCheckIns(currentObjectiveId);
+                    await refreshProgress(currentObjectiveId);
                 } else {
                     const data = await response.json();
                     showToast('Error', data.message || 'Failed to delete check-in', 'error');
@@ -987,6 +1072,65 @@
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
+            }
+        }
+
+        async function refreshProgress(objectiveId) {
+            try {
+                const response = await fetch(`{{ route('admin.check-ins.progress-data', ':objectiveId') }}`.replace(
+                    ':objectiveId', objectiveId));
+                if (!response.ok) throw new Error('Failed to fetch progress data');
+
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    const data = result.data;
+
+                    // Helper function to get progress color
+                    const getProgressColor = (progress) => {
+                        if (progress >= 100) return 'bg-success';
+                        if (progress >= 50) return 'bg-primary';
+                        if (progress >= 25) return 'bg-warning';
+                        return 'bg-danger';
+                    };
+
+                    // Update objective progress
+                    const objectiveProgressBar = document.getElementById(`objective-progress-bar-${objectiveId}`);
+                    const objectiveProgressText = document.getElementById(`objective-progress-text-${objectiveId}`);
+                    const objectiveCurrentValue = document.getElementById(`objective-current-value-${objectiveId}`);
+
+                    if (objectiveProgressBar && objectiveProgressText) {
+                        const progress = parseFloat(data.objective_progress).toFixed(1);
+                        objectiveProgressBar.style.width = `${progress}%`;
+                        objectiveProgressBar.setAttribute('aria-valuenow', progress);
+                        // Remove old color classes and add new one
+                        objectiveProgressBar.classList.remove('bg-success', 'bg-primary', 'bg-warning', 'bg-danger');
+                        objectiveProgressBar.classList.add(getProgressColor(parseFloat(progress)));
+                        objectiveProgressText.textContent = `${progress}%`;
+                    }
+
+                    if (objectiveCurrentValue) {
+                        objectiveCurrentValue.textContent =
+                            `${data.objective_current_value} / ${data.objective_target_value}`;
+                    }
+
+                    // Update OKR progress
+                    const okrId = data.okr_id;
+                    const okrProgressBar = document.getElementById(`okr-progress-bar-${okrId}`);
+                    const okrProgressText = document.getElementById(`okr-progress-text-${okrId}`);
+
+                    if (okrProgressBar && okrProgressText) {
+                        const progress = parseFloat(data.okr_progress).toFixed(1);
+                        okrProgressBar.style.width = `${progress}%`;
+                        okrProgressBar.setAttribute('aria-valuenow', progress);
+                        // Remove old color classes and add new one
+                        okrProgressBar.classList.remove('bg-success', 'bg-primary', 'bg-warning', 'bg-danger');
+                        okrProgressBar.classList.add(getProgressColor(parseFloat(progress)));
+                        okrProgressText.textContent = `${progress}%`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing progress:', error);
             }
         }
 

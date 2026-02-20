@@ -57,41 +57,16 @@ class DashboardController extends Controller
             abort(403, 'Access denied. Admin privileges required.');
         }
 
-        // Get overall statistics
-        $totalEmployees = Employee::count();
-        $activeEmployees = Employee::where('is_active', true)->count();
-        $totalOkrs = Okr::count();
-        $activeOkrs = Okr::where('is_active', true)->count();
-        $totalOrgUnits = OrgUnit::where('is_active', true)->count();
-
-        // Get roles
-        $roles = \App\Models\Role::withCount('employees')->get();
-
-        // Get recent OKRs
-        $recentOkrs = Okr::with(['okrType', 'employee', 'orgUnit'])
+        // Get active OKRs owned by orgunits (teams) with their progress
+        $teamOkrs = Okr::active()
+            ->whereNotNull('orgunit_id')
+            ->with(['okrType', 'orgUnit', 'objectives'])
             ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Get pending approvals (check-ins with pending approval status)
-        $pendingApprovals = CheckIn::whereHas('approvalLogs', function ($query) {
-            $query->where('status', 'pending');
-        })
-            ->with(['objective', 'objective.okr', 'objective.trackerEmployee', 'approvalLogs'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
             ->get();
 
         return view('admin.dashboard', compact(
             'user',
-            'totalEmployees',
-            'activeEmployees',
-            'totalOkrs',
-            'activeOkrs',
-            'totalOrgUnits',
-            'roles',
-            'recentOkrs',
-            'pendingApprovals'
+            'teamOkrs'
         ));
     }
 
