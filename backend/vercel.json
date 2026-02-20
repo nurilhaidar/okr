@@ -7,14 +7,14 @@
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/api/index.php"
+            "dest": "/"
         }
     ],
     "env": {
         "APP_ENV": "production",
         "APP_DEBUG": "true",
         "APP_URL": "https://your.url.from.vercel.app",
-        "APP_KEY": "add API key here from your .env file",
+        "APP_KEY": "base64:YVi/MT+rRTGfuAJ2foggu6HUAPDKTOSsmWb6uL0USmg=",
 
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",
